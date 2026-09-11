@@ -45,14 +45,22 @@
       letter-spacing: 1px;
     }
     
-    .viewfinder-container {
+    .viewfinder-wrapper {
       flex: 1 1 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .viewfinder-container {
       position: relative;
-      margin: 0 16px;
+      width: calc(100% - 32px);
+      aspect-ratio: 3 / 4; /* Locks the preview to standard 4:3 vertical */
       border-radius: 40px;
       overflow: hidden;
       background-color: #111;
-      max-height: 55vh; 
+      margin: 0 auto;
     }
     
     video {
@@ -87,7 +95,6 @@
       -webkit-backdrop-filter: blur(20px);
     }
 
-    /* Updated Filters Section for Higher Visibility */
     .filters-panel {
       border-radius: 24px;
       padding: 16px 16px 20px 16px;
@@ -97,25 +104,25 @@
       width: 90%;
       box-sizing: border-box;
       justify-content: center;
-      align-items: center; /* Keeps scaled items centered */
+      align-items: center;
     }
     .filter-option {
       display: flex;
       flex-direction: column;
       align-items: center;
       cursor: pointer;
-      opacity: 0.5; /* Dim inactive filters */
+      opacity: 0.5;
       transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     }
     .filter-option.active {
-      opacity: 1; /* Full brightness for active */
-      transform: scale(1.15); /* Physically pop out the active filter */
+      opacity: 1; 
+      transform: scale(1.15); 
     }
     .filter-thumb {
       width: 65px;
       height: 45px; 
       border-radius: 8px;
-      border: 3px solid transparent; /* Thicker border */
+      border: 3px solid transparent; 
       margin-bottom: 8px;
       position: relative;
       overflow: hidden;
@@ -124,8 +131,8 @@
       transition: all 0.3s ease;
     }
     .filter-option.active .filter-thumb { 
-      border-color: #ffffff; /* Bright white highlight */
-      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.25); /* Subtle glow */
+      border-color: #ffffff; 
+      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.25); 
     }
     .thumb-video {
       width: 100%;
@@ -150,10 +157,9 @@
     }
     .filter-option.active .filter-label {
       color: #ffffff;
-      font-weight: 800; /* Extra bold text for active state */
+      font-weight: 800; 
     }
     
-    /* Zoom Controls */
     .zoom-controls {
       border-radius: 30px; 
       padding: 8px 18px;
@@ -173,7 +179,6 @@
       color: #ffffff; 
     }
     
-    /* Shutter Row */
     .shutter-row {
       display: flex;
       align-items: center;
@@ -232,9 +237,11 @@
     </div>
   </div>
 
-  <div class="viewfinder-container">
-    <video id="camera-stream" playsinline autoplay muted></video>
-    <div class="flash-overlay" id="flash"></div>
+  <div class="viewfinder-wrapper">
+    <div class="viewfinder-container">
+      <video id="camera-stream" playsinline autoplay muted></video>
+      <div class="flash-overlay" id="flash"></div>
+    </div>
   </div>
 
   <div class="bottom-controls">
@@ -432,8 +439,25 @@
       flash.style.opacity = '1';
       setTimeout(() => flash.style.opacity = '0', 100);
 
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      // Enforce the 4:3 (3:4 vertical) crop on the actual saved image
+      const targetRatio = 3 / 4; 
+      const videoRatio = video.videoWidth / video.videoHeight;
+      
+      let cropWidth = video.videoWidth;
+      let cropHeight = video.videoHeight;
+      let startX = 0;
+      let startY = 0;
+
+      if (videoRatio > targetRatio) {
+        cropWidth = video.videoHeight * targetRatio;
+        startX = (video.videoWidth - cropWidth) / 2;
+      } else {
+        cropHeight = video.videoWidth / targetRatio;
+        startY = (video.videoHeight - cropHeight) / 2;
+      }
+
+      canvas.width = cropWidth;
+      canvas.height = cropHeight;
       ctx.filter = activeFilter;
 
       if (useFrontCamera) {
@@ -441,15 +465,20 @@
         ctx.scale(-1, 1);
       }
 
+      let finalCropWidth = cropWidth;
+      let finalCropHeight = cropHeight;
+      let finalStartX = startX;
+      let finalStartY = startY;
+
+      // Handle CSS digital zoom cropping
       if (currentZoom > 1 && video.style.transform.includes(`scale(${currentZoom})`)) {
-        const cropWidth = canvas.width / currentZoom;
-        const cropHeight = canvas.height / currentZoom;
-        const startX = (canvas.width - cropWidth) / 2;
-        const startY = (canvas.height - cropHeight) / 2;
-        ctx.drawImage(video, startX, startY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
-      } else {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        finalCropWidth = cropWidth / currentZoom;
+        finalCropHeight = cropHeight / currentZoom;
+        finalStartX = startX + (cropWidth - finalCropWidth) / 2;
+        finalStartY = startY + (cropHeight - finalCropHeight) / 2;
       }
+
+      ctx.drawImage(video, finalStartX, finalStartY, finalCropWidth, finalCropHeight, 0, 0, canvas.width, canvas.height);
       
       ctx.setTransform(1, 0, 0, 1, 0, 0);
 
