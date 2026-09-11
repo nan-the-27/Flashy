@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Real Camera Web App</title>
+  <style>
+    :root {
+      --bg-color: #000000;
+      --panel-bg: rgba(60, 60, 67, 0.4);
+      --text-main: #ffffff;
+      --text-muted: #8e8e93;
+    }
+    body {
+      margin: 0;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      -webkit-user-select: none;
+      user-select: none;
+      justify-content: space-between;
+      padding-bottom: constant(safe-area-inset-bottom);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    
+    .header {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px 20px 10px 20px;
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      z-index: 10;
+    }
+    .header .subtitle { 
+      font-size: 10px; 
+      color: var(--text-muted); 
+      display: block; 
+      margin-top: 2px;
+      letter-spacing: 1px;
+    }
+    
+    .viewfinder-container {
+      flex: 1 1 auto;
+      position: relative;
+      margin: 0 16px;
+      border-radius: 40px;
+      overflow: hidden;
+      background-color: #111;
+      max-height: 55vh; 
+    }
+    
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scale(1);
+      transition: transform 0.3s ease, filter 0.3s ease;
+    }
+
+    .flash-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: white;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.1s ease-out;
+    }
+    
+    .bottom-controls {
+      padding: 20px 0 30px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 10;
+      width: 100%;
+    }
+    
+    .frosted-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    /* Updated Filters Section for Higher Visibility */
+    .filters-panel {
+      border-radius: 24px;
+      padding: 16px 16px 20px 16px;
+      display: flex;
+      gap: 16px;
+      margin-bottom: 25px;
+      width: 90%;
+      box-sizing: border-box;
+      justify-content: center;
+      align-items: center; /* Keeps scaled items centered */
+    }
+    .filter-option {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      opacity: 0.5; /* Dim inactive filters */
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+    .filter-option.active {
+      opacity: 1; /* Full brightness for active */
+      transform: scale(1.15); /* Physically pop out the active filter */
+    }
+    .filter-thumb {
+      width: 65px;
+      height: 45px; 
+      border-radius: 8px;
+      border: 3px solid transparent; /* Thicker border */
+      margin-bottom: 8px;
+      position: relative;
+      overflow: hidden;
+      background: #333;
+      box-sizing: border-box;
+      transition: all 0.3s ease;
+    }
+    .filter-option.active .filter-thumb { 
+      border-color: #ffffff; /* Bright white highlight */
+      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.25); /* Subtle glow */
+    }
+    .thumb-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      top: 0; left: 0;
+      pointer-events: none;
+    }
+    
+    .thumb-orig .thumb-video { filter: none; }
+    .thumb-bw .thumb-video { filter: grayscale(100%); }
+    .thumb-film .thumb-video { filter: sepia(0.4) contrast(1.2) brightness(0.9) saturate(1.2); }
+
+    .filter-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      transition: all 0.3s ease;
+    }
+    .filter-option.active .filter-label {
+      color: #ffffff;
+      font-weight: 800; /* Extra bold text for active state */
+    }
+    
+    /* Zoom Controls */
+    .zoom-controls {
+      border-radius: 30px; 
+      padding: 8px 18px;
+      display: inline-flex;
+      gap: 20px;
+      font-size: 14px;
+      margin-bottom: 25px;
+    }
+    .zoom-btn {
+      color: var(--text-muted);
+      font-weight: 500;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .zoom-btn.active { 
+      font-weight: 700; 
+      color: #ffffff; 
+    }
+    
+    /* Shutter Row */
+    .shutter-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0 40px;
+      box-sizing: border-box;
+      margin-bottom: 10px;
+    }
+    .shutter-btn {
+      width: 76px;
+      height: 76px;
+      border: 4px solid var(--text-main);
+      border-radius: 50%;
+      background: transparent;
+      outline: none;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.1s;
+    }
+    .shutter-btn:active { 
+      transform: scale(0.92); 
+      opacity: 0.7;
+    }
+    
+    .icon-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: var(--text-main);
+      cursor: pointer;
+      background-size: cover;
+      background-position: center;
+      transition: opacity 0.2s;
+    }
+    .icon-btn:active { opacity: 0.5; }
+    .icon-btn svg { width: 22px; height: 22px; }
+    
+    .status-text {
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div style="text-align: center;">
+      <span id="photo-count-display">12</span> / 25
+      <span class="subtitle">PHOTOS</span>
+    </div>
+  </div>
+
+  <div class="viewfinder-container">
+    <video id="camera-stream" playsinline autoplay muted></video>
+    <div class="flash-overlay" id="flash"></div>
+  </div>
+
+  <div class="bottom-controls">
+    <div class="filters-panel frosted-panel">
+      <div class="filter-option active" data-filter="none">
+        <div class="filter-thumb thumb-orig">
+          <video class="thumb-video" playsinline autoplay muted></video>
+        </div>
+        <span class="filter-label">ORIGINAL</span>
+      </div>
+      <div class="filter-option" data-filter="grayscale(100%)">
+        <div class="filter-thumb thumb-bw">
+          <video class="thumb-video" playsinline autoplay muted></video>
+        </div>
+        <span class="filter-label">B/W</span>
+      </div>
+      <div class="filter-option" data-filter="sepia(0.4) contrast(1.2) brightness(0.9) saturate(1.2)">
+        <div class="filter-thumb thumb-film">
+          <video class="thumb-video" playsinline autoplay muted></video>
+        </div>
+        <span class="filter-label">FILM VIBE</span>
+      </div>
+    </div>
+
+    <div class="zoom-controls frosted-panel" id="zoom-panel"></div>
+
+    <div class="shutter-row">
+      <div class="icon-btn frosted-panel" id="gallery-thumb">
+        <svg id="gallery-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+          <polyline points="21 15 16 10 5 21"></polyline>
+        </svg>
+      </div>
+      
+      <button class="shutter-btn" id="shutter-btn"></button>
+      
+      <div class="icon-btn frosted-panel" id="flip-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="1 4 1 10 7 10"></polyline>
+          <polyline points="23 20 23 14 17 14"></polyline>
+          <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+        </svg>
+      </div>
+    </div>
+
+    <div class="status-text" id="status-msg">READY TO SHOOT</div>
+  </div>
+
+  <canvas id="photo-canvas" style="display:none;"></canvas>
+
+  <script>
+    const video = document.getElementById('camera-stream');
+    const thumbVideos = document.querySelectorAll('.thumb-video');
+    const flash = document.getElementById('flash');
+    const galleryThumb = document.getElementById('gallery-thumb');
+    const galleryIcon = document.getElementById('gallery-icon');
+    const photoCountDisplay = document.getElementById('photo-count-display');
+    const zoomPanel = document.getElementById('zoom-panel');
+    const canvas = document.getElementById('photo-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    let currentStream = null;
+    let useFrontCamera = false;
+    let activeFilter = 'none';
+    let currentZoom = 1;
+    let photoCount = 12;
+    let lensesDetected = false;
+
+    async function setupDynamicZoom() {
+      if (lensesDetected) return; 
+      zoomPanel.innerHTML = ''; 
+      
+      let availableZooms = new Set([1, 2]); 
+      
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices.filter(d => d.kind === 'videoinput');
+        
+        let backCameraCount = 0;
+        
+        videoInputs.forEach(device => {
+          const label = device.label.toLowerCase();
+          if (label.includes('back') || label.includes('environment')) {
+            backCameraCount++;
+            if (label.includes('ultra') || label.includes('0.5')) availableZooms.add(0.5);
+            if (label.includes('tele') || label.includes('3x')) availableZooms.add(3);
+          }
+        });
+
+        if (backCameraCount >= 3) {
+          availableZooms.add(0.5);
+          availableZooms.add(3);
+        }
+      } catch (e) {
+        console.warn("Could not read device labels.");
+      }
+
+      const sortedZooms = Array.from(availableZooms).sort((a, b) => a - b);
+      
+      sortedZooms.forEach(z => {
+        const span = document.createElement('span');
+        span.className = 'zoom-btn' + (z === 1 ? ' active' : '');
+        span.innerText = z + 'x';
+        
+        span.addEventListener('click', async (e) => {
+          document.querySelectorAll('.zoom-btn').forEach(el => el.classList.remove('active'));
+          e.target.classList.add('active');
+          
+          currentZoom = z;
+          applyZoom(currentZoom);
+        });
+        
+        zoomPanel.appendChild(span);
+      });
+      
+      lensesDetected = true;
+    }
+
+    async function applyZoom(zoomValue) {
+      if (!currentStream) return;
+      const track = currentStream.getVideoTracks()[0];
+      const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+      const mirrorTransform = useFrontCamera ? 'scaleX(-1)' : '';
+
+      if (capabilities.zoom) {
+         try {
+           await track.applyConstraints({ advanced: [{ zoom: zoomValue }] });
+           video.style.transform = `scale(1) ${mirrorTransform}`; 
+         } catch (err) {
+           video.style.transform = `scale(${zoomValue}) ${mirrorTransform}`;
+         }
+      } else {
+         video.style.transform = `scale(${zoomValue}) ${mirrorTransform}`;
+      }
+    }
+
+    async function startCamera() {
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+      }
+
+      const constraints = {
+        video: {
+          facingMode: useFrontCamera ? "user" : "environment",
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        },
+        audio: false
+      };
+
+      try {
+        currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        video.srcObject = currentStream;
+        
+        thumbVideos.forEach(v => {
+          v.srcObject = currentStream;
+          v.style.transform = useFrontCamera ? 'scaleX(-1)' : '';
+        });
+        
+        currentZoom = 1; 
+        applyZoom(currentZoom);
+        
+        await setupDynamicZoom();
+        
+        document.querySelectorAll('.zoom-btn').forEach(el => {
+          el.classList.toggle('active', el.innerText === '1x');
+        });
+
+        document.getElementById('status-msg').innerText = "READY TO SHOOT";
+      } catch (err) {
+        console.error("Camera Error:", err);
+        document.getElementById('status-msg').innerText = "CAMERA ACCESS DENIED";
+      }
+    }
+
+    document.getElementById('flip-btn').addEventListener('click', () => {
+      useFrontCamera = !useFrontCamera;
+      startCamera();
+    });
+
+    document.querySelectorAll('.filter-option').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.filter-option').forEach(el => el.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        activeFilter = e.currentTarget.getAttribute('data-filter');
+        video.style.filter = activeFilter;
+      });
+    });
+
+    document.getElementById('shutter-btn').addEventListener('click', () => {
+      if (!currentStream) return;
+
+      flash.style.opacity = '1';
+      setTimeout(() => flash.style.opacity = '0', 100);
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.filter = activeFilter;
+
+      if (useFrontCamera) {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+      }
+
+      if (currentZoom > 1 && video.style.transform.includes(`scale(${currentZoom})`)) {
+        const cropWidth = canvas.width / currentZoom;
+        const cropHeight = canvas.height / currentZoom;
+        const startX = (canvas.width - cropWidth) / 2;
+        const startY = (canvas.height - cropHeight) / 2;
+        ctx.drawImage(video, startX, startY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
+      } else {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      }
+      
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+      const imgURL = canvas.toDataURL('image/jpeg');
+      galleryThumb.style.backgroundImage = `url(${imgURL})`;
+      galleryIcon.style.display = 'none';
+
+      photoCount++;
+      photoCountDisplay.innerText = photoCount;
+    });
+
+    startCamera();
+  </script>
+</body>
+</html>
