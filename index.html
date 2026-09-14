@@ -1,496 +1,765 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Real Camera Web App</title>
-  <style>
-    :root {
-      --bg-color: #000000;
-      --panel-bg: rgba(60, 60, 67, 0.4);
-      --text-main: #ffffff;
-      --text-muted: #8e8e93;
-    }
-    body {
-      margin: 0;
-      background-color: var(--bg-color);
-      color: var(--text-main);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      overflow: hidden;
-      -webkit-user-select: none;
-      user-select: none;
-      justify-content: space-between;
-      padding-bottom: constant(safe-area-inset-bottom);
-      padding-bottom: env(safe-area-inset-bottom);
-    }
-    
-    .header {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 20px 20px 10px 20px;
-      font-size: 16px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      z-index: 10;
-    }
-    .header .subtitle { 
-      font-size: 10px; 
-      color: var(--text-muted); 
-      display: block; 
-      margin-top: 2px;
-      letter-spacing: 1px;
-    }
-    
-    .viewfinder-wrapper {
-      flex: 1 1 auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-    }
+<meta charset="UTF-8">
+<!-- Optimized Viewport for Notches and Fullscreen -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
-    .viewfinder-container {
-      position: relative;
-      width: calc(100% - 32px);
-      aspect-ratio: 3 / 4; /* Locks the preview to standard 4:3 vertical */
-      border-radius: 40px;
-      overflow: hidden;
-      background-color: #111;
-      margin: 0 auto;
-    }
-    
-    video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transform: scale(1);
-      transition: transform 0.3s ease, filter 0.3s ease;
-    }
+<!-- Progressive Web App (PWA) Meta Tags -->
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Companion">
 
-    .flash-overlay {
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: white;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.1s ease-out;
-    }
-    
-    .bottom-controls {
-      padding: 20px 0 30px 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      z-index: 10;
-      width: 100%;
-    }
-    
-    .frosted-panel {
-      background: var(--panel-bg);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-    }
+<!-- Embedded JSON Manifest for Android Installability -->
+<link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22Companion%22%2C%22short_name%22%3A%22Companion%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23000000%22%2C%22theme_color%22%3A%22%23000000%22%7D">
 
-    .filters-panel {
-      border-radius: 24px;
-      padding: 16px 16px 20px 16px;
-      display: flex;
-      gap: 16px;
-      margin-bottom: 25px;
-      width: 90%;
-      box-sizing: border-box;
-      justify-content: center;
-      align-items: center;
-    }
-    .filter-option {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      cursor: pointer;
-      opacity: 0.5;
-      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    }
-    .filter-option.active {
-      opacity: 1; 
-      transform: scale(1.15); 
-    }
-    .filter-thumb {
-      width: 65px;
-      height: 45px; 
-      border-radius: 8px;
-      border: 3px solid transparent; 
-      margin-bottom: 8px;
-      position: relative;
-      overflow: hidden;
-      background: #333;
-      box-sizing: border-box;
-      transition: all 0.3s ease;
-    }
-    .filter-option.active .filter-thumb { 
-      border-color: #ffffff; 
-      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.25); 
-    }
-    .thumb-video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      position: absolute;
-      top: 0; left: 0;
-      pointer-events: none;
-    }
-    
-    .thumb-orig .thumb-video { filter: none; }
-    .thumb-bw .thumb-video { filter: grayscale(100%); }
-    .thumb-film .thumb-video { filter: sepia(0.4) contrast(1.2) brightness(0.9) saturate(1.2); }
+<!-- Minimalist Embedded App Icon (Two eyes on black background) -->
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzAwMCIvPjxjaXJjbGUgY3g9IjM1IiBjeT0iNTAiIHI9IjEyIiBmaWxsPSIjZmZmIi8+PGNpcmNsZSBjeD0iNjUiIGN5PSI1MCIgcj0iMTIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=" type="image/svg+xml">
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzAwMCIvPjxjaXJjbGUgY3g9IjM1IiBjeT0iNTAiIHI9IjEyIiBmaWxsPSIjZmZmIi8+PGNpcmNsZSBjeD0iNjUiIGN5PSI1MCIgcj0iMTIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=">
 
-    .filter-label {
-      font-size: 10px;
-      font-weight: 500;
-      letter-spacing: 1px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      transition: all 0.3s ease;
-    }
-    .filter-option.active .filter-label {
-      color: #ffffff;
-      font-weight: 800; 
-    }
-    
-    .zoom-controls {
-      border-radius: 30px; 
-      padding: 8px 18px;
-      display: inline-flex;
-      gap: 20px;
-      font-size: 14px;
-      margin-bottom: 25px;
-    }
-    .zoom-btn {
-      color: var(--text-muted);
-      font-weight: 500;
-      cursor: pointer;
-      transition: color 0.2s;
-    }
-    .zoom-btn.active { 
-      font-weight: 700; 
-      color: #ffffff; 
-    }
-    
-    .shutter-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      width: 100%;
-      padding: 0 40px;
-      box-sizing: border-box;
-      margin-bottom: 10px;
-    }
-    .shutter-btn {
-      width: 76px;
-      height: 76px;
-      border: 4px solid var(--text-main);
-      border-radius: 50%;
-      background: transparent;
-      outline: none;
-      cursor: pointer;
-      transition: transform 0.1s, opacity 0.1s;
-    }
-    .shutter-btn:active { 
-      transform: scale(0.92); 
-      opacity: 0.7;
-    }
-    
-    .icon-btn {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: var(--text-main);
-      cursor: pointer;
-      background-size: cover;
-      background-position: center;
-      transition: opacity 0.2s;
-    }
-    .icon-btn:active { opacity: 0.5; }
-    .icon-btn svg { width: 22px; height: 22px; }
-    
-    .status-text {
-      font-size: 11px;
-      letter-spacing: 1.5px;
-      font-weight: 600;
-      color: var(--text-muted);
-      margin-top: 15px;
-    }
-  </style>
+<title>Companion</title>
+<style>
+  /* App-like CSS Resets */
+  * { 
+    box-sizing:border-box; 
+    -webkit-tap-highlight-color:transparent; 
+    -webkit-user-select:none; 
+    user-select:none; 
+    -webkit-touch-callout:none; 
+  }
+  html,body { 
+    margin:0; width:100%; height:100%; 
+    background:#000; overflow:hidden; 
+    touch-action:none; /* Prevents pull-to-refresh */
+  }
+  
+  .stage { width:100vw; height:100vh; display:flex; align-items:center; justify-content:center; }
+  svg { width:min(90vw, 900px); height:auto; max-height:80vh; display:block; }
+  
+  /* Respect Safe Areas (Notches) for UI Elements */
+  .dot {
+    position:fixed; top:max(16px, env(safe-area-inset-top)); right:max(16px, env(safe-area-inset-right)); width:8px; height:8px; border-radius:50%;
+    background:#2a2a2a; box-shadow:0 0 6px rgba(255,255,255,0.05); cursor:pointer; z-index:10;
+  }
+  .dot.live { background:#32d74b; box-shadow:0 0 8px #32d74b; animation:pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+  
+  .drive-btn {
+    position:fixed; top:max(14px, env(safe-area-inset-top)); right:max(34px, env(safe-area-inset-right)); width:26px; height:26px; border-radius:50%;
+    border:1px solid #333; background:#111; cursor:pointer; z-index:10; transition:all .2s;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .drive-btn svg { width:14px; height:14px; stroke:#555; transition:stroke .2s; }
+  .drive-btn.on { border-color:#32d74b; box-shadow:0 0 8px rgba(50,215,75,0.4); }
+  .drive-btn.on svg { stroke:#32d74b; }
+  
+  .sim-toggle {
+    position:fixed; top:max(16px, env(safe-area-inset-top)); right:max(64px, env(safe-area-inset-right)); width:8px; height:8px; border-radius:50%;
+    background:#1a1a1a; cursor:pointer; z-index:10; transition:background .2s, box-shadow .2s;
+  }
+  .sim-toggle.open { background:#32d74b; box-shadow:0 0 8px #32d74b; }
+  
+  .sim-panel {
+    position:fixed; left:50%; bottom:max(18px, env(safe-area-inset-bottom)); transform:translateX(-50%) translateY(12px);
+    width:min(92vw, 360px); background:rgba(12,12,12,0.85); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border:1px solid #262626; border-radius:12px;
+    padding:12px; z-index:20; opacity:0; pointer-events:none; transition:opacity .3s cubic-bezier(0.2,0.8,0.2,1), transform .3s cubic-bezier(0.2,0.8,0.2,1);
+    font:11px/1.4 -apple-system, system-ui, sans-serif; color:#777;
+  }
+  .sim-panel.open { opacity:1; pointer-events:auto; transform:translateX(-50%) translateY(0); }
+  .sim-row { display:flex; gap:6px; margin-bottom:8px; }
+  .sim-row:last-child { margin-bottom:0; }
+  .sim-btn {
+    flex:1; background:#181818; border:1px solid #2a2a2a; color:#bbb; border-radius:7px;
+    padding:7px 4px; font:11px inherit; cursor:pointer; text-align:center; transition:0.15s;
+  }
+  .sim-btn:active { background:#32d74b; color:#000; border-color:#32d74b; }
+  
+  .sim-slider-row { display:flex; align-items:center; gap:8px; }
+  .sim-slider-row input[type=range] { flex:1; accent-color:#32d74b; }
+  .sim-slider-row span { width:60px; text-align:right; color:#32d74b; font-weight:500; }
+
+  /* Premium Debug Menu */
+  .hidden-trigger { position:fixed; top:max(0px, env(safe-area-inset-top)); left:max(0px, env(safe-area-inset-left)); width:60px; height:60px; z-index:100; cursor:pointer; }
+  .expr-menu {
+    position:fixed; top:max(20px, env(safe-area-inset-top)); left:50%; transform:translateX(-50%);
+    width:min(95vw, 650px); display:flex; flex-wrap:wrap; gap:6px; justify-content:center;
+    background:rgba(15,15,15,0.75); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+    border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:16px;
+    z-index:90; opacity:0; pointer-events:none; transition:opacity 0.25s ease-out;
+  }
+  .expr-menu.open { opacity:1; pointer-events:auto; }
+  .expr-btn {
+    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.05); color:#dedede; border-radius:8px;
+    padding:7px 12px; font:12px -apple-system, system-ui, sans-serif; font-weight:500; cursor:pointer; text-align:center; transition:0.2s;
+  }
+  .expr-btn:active, .expr-btn:hover { background:#32d74b; color:#000; border-color:#32d74b; }
+
+  /* Fluid transitions for rendering */
+  #eyesGroup { transition: fill 0.4s cubic-bezier(0.2,0.8,0.2,1); }
+  #pathMouth { transition: stroke 0.4s cubic-bezier(0.2,0.8,0.2,1), opacity 0.4s cubic-bezier(0.2,0.8,0.2,1); }
+  .hud-item { opacity:0; transition:opacity 0.4s cubic-bezier(0.2,0.8,0.2,1); }
+  .hud-item.active { opacity:1; animation:hud-float 3s ease-in-out infinite; }
+  @keyframes hud-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+</style>
 </head>
 <body>
+  <div class="hidden-trigger" id="hiddenTrigger"></div>
+  <div class="expr-menu" id="exprMenu"></div>
 
-  <div class="header">
-    <div style="text-align: center;">
-      <span id="photo-count-display">12</span> / 25
-      <span class="subtitle">PHOTOS</span>
+  <div class="dot" id="liveDot" title="tap to pause/resume"></div>
+  <div class="drive-btn" id="driveBtn" title="tap to enable drive mode (motion sensors)">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 17h14M5 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm14 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM3 17l1.5-5.5A2 2 0 0 1 6.4 10h11.2a2 2 0 0 1 1.9 1.5L21 17M6 10l1.5-3.5A2 2 0 0 1 9.3 5h5.4a2 2 0 0 1 1.8 1.5L18 10"/>
+    </svg>
+  </div>
+  <div class="sim-toggle" id="simToggle" title="simulate"></div>
+  <div class="sim-panel" id="simPanel">
+    <div class="sim-row">
+      <div class="sim-btn" data-sim="turnL">Turn L</div>
+      <div class="sim-btn" data-sim="turnR">Turn R</div>
+      <div class="sim-btn" data-sim="brake">Brake</div>
+      <div class="sim-btn" data-sim="accel">Accel</div>
+      <div class="sim-btn" data-sim="spin">Spin Out</div>
     </div>
+    <div class="sim-row">
+      <div class="sim-btn" data-sim="hillUp">Hill Up</div>
+      <div class="sim-btn" data-sim="hillDown">Hill Down</div>
+      <div class="sim-btn" data-sim="tiltL">Tilt L</div>
+      <div class="sim-btn" data-sim="tiltR">Tilt R</div>
+    </div>
+    <div class="sim-slider-row">
+      <input type="range" id="simSpeed" min="0" max="120" value="0">
+      <span id="simSpeedVal">0 km/h</span>
+    </div>
+    <div style="margin-top:8px; text-align:center; color:#555;">W/S speed · A/D turn (hold)</div>
+  </div>
+  <div class="stage">
+    <svg id="svg" viewBox="0 0 291 159" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3.5" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <g id="eyesGroup" fill="#ffffff">
+        <path id="pathLeft" />
+        <path id="pathRight" />
+        <path id="pathMouth" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="0" />
+        
+        <!-- Premium HUD Holograms -->
+        <g id="hud-glee" class="hud-item" filter="url(#softGlow)">
+          <path d="M 235 25 Q 235 35 245 35 Q 235 35 235 45 Q 235 35 225 35 Q 235 35 235 25 Z" fill="#32d74b"/>
+          <path d="M 215 15 Q 215 20 220 20 Q 215 20 215 25 Q 215 20 210 20 Q 215 20 215 15 Z" fill="#32d74b"/>
+        </g>
+        <g id="hud-surprised" class="hud-item" filter="url(#softGlow)">
+          <path d="M235 15 L235 40 M235 52 L235 55" stroke="#ff9f0a" stroke-width="7" stroke-linecap="round"/>
+        </g>
+        <g id="hud-scared" class="hud-item" filter="url(#softGlow)">
+          <path d="M70 15 C 80 30, 85 45, 70 45 C 55 45, 60 30, 70 15 Z" fill="#0a84ff" opacity="0.9"/>
+        </g>
+        <g id="hud-furious" class="hud-item" filter="url(#softGlow)">
+          <path d="M225 25 L240 25 M232.5 17 L232.5 32 M245 40 L255 40 M250 35 L250 45" stroke="#ff453a" stroke-width="4" fill="none" stroke-linecap="round"/>
+        </g>
+        <g id="hud-skeptic" class="hud-item" filter="url(#softGlow)">
+          <path d="M235 40 Q235 20 250 20 Q265 20 265 33 Q265 45 250 50 M250 62 L250 65" stroke="#bf5af2" stroke-width="6" fill="none" stroke-linecap="round"/>
+        </g>
+        <g id="hud-sleepy" class="hud-item" filter="url(#softGlow)">
+          <text x="215" y="35" fill="#0a84ff" font-family="system-ui, sans-serif" font-weight="700" font-size="22">Z</text>
+          <text x="238" y="18" fill="#0a84ff" font-family="system-ui, sans-serif" font-weight="700" font-size="14">z</text>
+        </g>
+        <g id="hud-love" class="hud-item" filter="url(#softGlow)">
+          <path d="M 244 15 A 7 7 0 0 1 258 15 A 7 7 0 0 1 272 15 Q 272 29 258 43 Q 244 29 244 15 Z" fill="#ff2d55"/>
+          <path d="M 20 15 A 7 7 0 0 1 34 15 A 7 7 0 0 1 48 15 Q 48 29 34 43 Q 20 29 20 15 Z" fill="#ff2d55"/>
+        </g>
+        <g id="hud-processing" class="hud-item" filter="url(#softGlow)">
+          <rect x="220" y="20" width="8" height="8" rx="4" fill="#0a84ff" />
+          <rect x="235" y="20" width="8" height="8" rx="4" fill="#0a84ff" />
+          <rect x="250" y="20" width="8" height="8" rx="4" fill="#0a84ff" />
+        </g>
+        <g id="hud-dizzy" class="hud-item" filter="url(#softGlow)">
+          <polygon points="250,10 253,18 262,18 255,23 257,31 250,26 243,31 245,23 238,18 247,18" fill="#ff9f0a"/>
+          <polygon points="40,20 42,26 50,26 44,30 46,36 40,32 34,36 36,30 30,26 38,26" fill="#bf5af2"/>
+        </g>
+      </g>
+    </svg>
   </div>
 
-  <div class="viewfinder-wrapper">
-    <div class="viewfinder-container">
-      <video id="camera-stream" playsinline autoplay muted></video>
-      <div class="flash-overlay" id="flash"></div>
-    </div>
-  </div>
+<script>
+  // EXACT ORIGINAL POINTS (Retained per request)
+  const SHAPES = {
+    "Neutral": {"left": [[74.0, 45.0], [63.6, 55.4], [63.0, 73.4], [63.0, 91.7], [64.5, 109.0], [74.5, 119.0], [92.8, 119.0], [111.0, 119.0], [129.2, 118.8], [139.0, 108.8], [139.0, 90.5], [139.5, 72.5], [138.7, 56.0], [128.7, 45.0], [110.5, 45.0], [92.2, 45.0]], "right": [[163.0, 37.0], [153.9, 49.0], [152.0, 66.7], [152.0, 86.2], [152.0, 105.8], [163.0, 115.3], [178.4, 120.0], [198.0, 120.0], [217.6, 120.0], [226.7, 108.0], [229.0, 90.8], [229.0, 71.2], [229.0, 51.6], [219.0, 40.3], [202.1, 37.0], [182.6, 37.0]]},
+    "Blink": {"left": [[136.0, 62.0], [137.5, 62.3], [138.7, 63.3], [139.4, 64.7], [139.4, 66.3], [138.7, 67.7], [137.5, 68.7], [136.0, 69.0], [66.5, 69.0], [65.0, 68.7], [63.8, 67.7], [63.1, 66.3], [63.1, 64.7], [63.8, 63.3], [65.0, 62.3], [66.5, 62.0]], "right": [[225.5, 62.0], [227.0, 62.3], [228.2, 63.3], [228.9, 64.7], [228.9, 66.3], [228.2, 67.7], [227.0, 68.7], [225.5, 69.0], [155.5, 69.0], [154.0, 68.7], [152.8, 67.7], [152.1, 66.3], [152.1, 64.7], [152.8, 63.3], [154.0, 62.3], [155.5, 62.0]]},
+    "Happy": {"left": [[69.0, 70.0], [62.8, 76.0], [58.0, 84.1], [62.9, 91.0], [74.8, 91.0], [86.6, 91.0], [98.4, 91.0], [110.2, 91.0], [122.0, 91.0], [133.8, 91.0], [131.8, 81.0], [124.2, 75.2], [116.2, 70.0], [104.4, 70.0], [92.6, 70.0], [80.8, 70.0]], "right": [[169.0, 70.0], [161.8, 76.0], [156.0, 83.5], [161.1, 91.0], [173.2, 91.0], [185.2, 91.0], [197.3, 91.0], [209.4, 91.0], [221.4, 91.0], [233.0, 90.5], [231.5, 81.5], [224.5, 76.0], [217.2, 70.0], [205.2, 70.0], [193.1, 70.0], [181.1, 70.0]]},
+    "Glee": {"left": [[74.0, 54.0], [68.0, 60.7], [63.0, 67.6], [68.0, 70.7], [78.5, 69.0], [90.0, 69.0], [101.6, 69.0], [113.2, 69.0], [124.7, 69.0], [133.4, 73.0], [133.8, 63.0], [127.0, 58.0], [120.2, 54.0], [108.7, 54.0], [97.1, 54.0], [85.6, 54.0]], "right": [[170.0, 54.0], [165.0, 61.6], [159.0, 67.4], [164.0, 70.2], [174.8, 69.0], [186.3, 69.0], [197.7, 69.0], [209.2, 69.0], [220.6, 69.0], [229.2, 73.0], [230.8, 63.0], [223.8, 58.0], [215.7, 54.0], [204.3, 54.0], [192.9, 54.0], [181.4, 54.0]]},
+    "Awe": {"left": [[80.0, 28.0], [66.0, 36.8], [56.4, 50.0], [56.0, 70.0], [56.0, 90.4], [61.0, 107.0], [74.8, 116.0], [92.4, 120.0], [112.9, 120.0], [127.0, 111.9], [136.0, 98.7], [136.0, 78.3], [136.0, 57.9], [131.0, 41.2], [119.0, 30.5], [100.4, 28.0]], "right": [[173.0, 28.0], [160.0, 38.6], [155.0, 56.0], [155.0, 76.7], [155.0, 97.4], [163.8, 110.8], [177.2, 120.0], [197.9, 120.0], [215.7, 116.0], [229.1, 106.9], [235.0, 92.1], [236.0, 71.8], [235.2, 52.0], [226.8, 37.8], [212.0, 30.3], [193.7, 28.0]]},
+    "surprised": {"left": [[66.0, 22.0], [53.2, 34.8], [45.0, 51.8], [45.0, 75.2], [47.1, 97.0], [58.0, 111.8], [72.0, 121.0], [94.5, 121.0], [117.3, 120.3], [129.7, 108.0], [139.0, 93.8], [139.0, 70.4], [139.0, 47.1], [127.3, 33.3], [112.7, 22.0], [89.4, 22.0]], "right": [[167.0, 22.0], [154.5, 34.5], [147.0, 51.7], [147.0, 74.9], [148.1, 97.0], [160.0, 110.0], [173.8, 121.0], [197.0, 121.0], [219.8, 120.2], [233.5, 108.5], [241.0, 91.3], [241.0, 68.1], [240.9, 45.0], [229.0, 31.4], [213.4, 22.0], [190.2, 22.0]]},
+    "Scared": {"left": [[89.0, 28.0], [79.0, 36.9], [74.0, 49.0], [74.0, 64.9], [74.0, 80.9], [79.6, 93.0], [95.5, 93.0], [111.5, 93.0], [127.4, 93.0], [140.4, 88.6], [141.0, 72.9], [141.0, 57.0], [141.0, 41.1], [134.8, 28.8], [119.2, 28.0], [103.3, 28.0]], "right": [[160.0, 28.0], [153.0, 39.8], [153.0, 55.7], [153.0, 71.6], [153.0, 87.4], [165.1, 93.0], [181.0, 93.0], [196.8, 93.0], [212.7, 93.0], [220.0, 82.7], [220.0, 66.8], [220.0, 50.9], [216.4, 38.0], [207.0, 29.2], [191.8, 28.0], [175.9, 28.0]]},
+    "worry": {"left": [[107.0, 40.0], [93.8, 45.0], [78.9, 49.0], [67.0, 55.9], [67.0, 73.5], [67.0, 91.2], [72.7, 104.7], [85.3, 110.0], [103.0, 110.0], [120.7, 110.0], [133.6, 105.0], [141.0, 94.4], [142.0, 77.1], [142.0, 59.5], [137.6, 45.0], [124.7, 40.0]], "right": [[161.0, 39.0], [154.0, 51.6], [154.0, 69.4], [154.0, 87.2], [160.0, 100.2], [169.6, 109.4], [186.8, 110.0], [204.7, 110.0], [219.0, 106.8], [228.7, 97.3], [229.0, 79.6], [229.0, 61.8], [222.0, 49.8], [207.2, 45.0], [189.5, 44.5], [178.4, 40.0]]},
+    "sad__look_at_user_": {"left": [[96.0, 15.0], [86.3, 22.0], [71.5, 22.0], [62.2, 28.2], [60.0, 41.3], [60.2, 56.0], [68.8, 64.0], [83.7, 64.0], [98.2, 65.0], [113.1, 65.0], [122.2, 58.8], [130.4, 51.0], [133.0, 38.2], [133.0, 23.3], [125.8, 15.0], [110.9, 15.0]], "right": [[154.0, 15.0], [153.0, 29.5], [153.0, 44.5], [158.0, 55.6], [165.3, 65.0], [180.3, 65.0], [195.2, 65.0], [210.2, 65.0], [218.5, 57.5], [226.0, 49.4], [226.0, 34.5], [218.0, 26.3], [207.4, 22.0], [192.4, 22.0], [183.9, 15.0], [169.0, 15.0]]},
+    "Sad__look_down_": {"left": [[125.0, 109.0], [117.2, 115.0], [104.4, 115.0], [92.0, 115.5], [83.1, 120.0], [71.5, 123.0], [59.1, 123.9], [62.3, 134.0], [68.0, 142.9], [80.8, 143.0], [93.6, 143.0], [106.5, 143.0], [119.3, 143.0], [126.2, 135.8], [132.0, 128.3], [132.0, 115.4]], "right": [[167.0, 109.0], [157.0, 112.4], [157.0, 125.2], [160.0, 135.0], [167.7, 143.0], [180.5, 143.0], [193.3, 143.0], [206.0, 143.0], [218.8, 143.0], [225.3, 134.7], [230.0, 126.2], [220.5, 123.0], [210.5, 119.0], [197.8, 118.8], [187.7, 115.0], [175.0, 115.0]]},
+    "Furious": {"left": [[74.0, 54.0], [73.0, 67.7], [73.0, 81.8], [73.0, 95.9], [80.7, 104.0], [94.8, 104.0], [108.9, 104.0], [122.6, 103.0], [136.5, 102.5], [141.0, 91.5], [141.0, 77.4], [134.7, 69.0], [123.5, 65.0], [109.6, 64.6], [99.4, 58.0], [87.0, 55.7]], "right": [[209.0, 55.0], [197.8, 59.2], [186.2, 64.0], [172.1, 64.0], [161.8, 69.0], [155.0, 76.9], [155.0, 91.0], [160.5, 100.5], [172.1, 104.0], [186.2, 104.0], [200.3, 104.0], [214.4, 104.0], [222.0, 97.1], [223.0, 83.4], [223.0, 69.3], [223.0, 55.1]]},
+    "angery": {"left": [[72.0, 77.0], [72.0, 89.2], [72.0, 101.5], [78.3, 107.3], [85.3, 113.0], [97.5, 113.0], [109.8, 113.0], [122.0, 113.0], [131.0, 109.2], [137.0, 101.8], [137.0, 89.5], [127.7, 86.0], [118.2, 82.2], [106.1, 82.0], [93.9, 81.9], [83.8, 78.0]], "right": [[211.0, 77.0], [200.2, 79.0], [190.4, 82.0], [178.2, 82.0], [168.2, 85.8], [156.1, 86.0], [152.0, 94.7], [152.9, 106.0], [159.0, 112.5], [170.7, 113.0], [182.9, 113.0], [195.1, 113.0], [207.3, 113.0], [214.2, 106.0], [216.0, 95.6], [216.0, 83.4]]},
+    "annoyed": {"left": [[73.0, 64.0], [73.0, 74.9], [81.0, 78.3], [90.7, 80.0], [101.6, 80.0], [112.4, 80.0], [123.3, 80.0], [134.1, 80.0], [141.2, 75.0], [145.0, 68.0], [138.1, 64.0], [127.3, 64.0], [116.4, 64.0], [105.6, 64.0], [94.7, 64.0], [83.9, 64.0]], "right": [[163.0, 62.0], [162.9, 71.9], [172.5, 73.0], [183.1, 73.0], [193.8, 73.0], [204.4, 73.0], [215.1, 73.0], [225.8, 73.0], [236.0, 72.6], [237.0, 63.2], [226.9, 62.0], [216.3, 62.0], [205.6, 62.0], [195.0, 62.0], [184.3, 62.0], [173.7, 62.0]]},
+    "Frustrated_or_Bored": {"left": [[59.0, 101.0], [58.0, 112.0], [65.6, 116.6], [72.7, 121.0], [84.1, 121.0], [95.2, 122.0], [106.7, 122.0], [117.7, 121.0], [123.9, 116.0], [131.0, 109.8], [127.8, 101.0], [116.3, 101.0], [104.9, 101.0], [93.4, 101.0], [81.9, 101.0], [70.5, 101.0]], "right": [[158.0, 101.0], [157.0, 111.7], [164.4, 117.4], [171.5, 121.0], [182.6, 121.0], [193.8, 121.0], [204.9, 121.0], [216.0, 121.0], [222.8, 116.0], [228.0, 109.5], [224.8, 101.0], [213.7, 101.0], [202.5, 101.0], [191.4, 101.0], [180.3, 101.0], [169.1, 101.0]]},
+    "Unimpressed": {"left": [[60.0, 96.0], [59.0, 106.1], [66.0, 112.2], [73.5, 116.0], [84.8, 116.0], [96.1, 116.0], [107.5, 116.0], [118.8, 116.0], [125.3, 110.0], [131.0, 104.0], [128.0, 96.0], [116.6, 96.0], [105.3, 96.0], [94.0, 96.0], [82.7, 96.0], [71.3, 96.0]], "right": [[157.0, 88.0], [156.0, 100.1], [160.6, 108.0], [166.8, 116.0], [178.9, 117.0], [191.4, 117.0], [202.6, 116.0], [215.1, 116.0], [222.9, 111.0], [229.0, 104.0], [229.0, 91.5], [219.4, 88.0], [206.9, 88.0], [194.5, 88.0], [182.0, 88.0], [169.5, 88.0]]},
+    "Skeptic": {"left": [[73.0, 47.0], [63.0, 58.0], [61.0, 74.7], [61.0, 92.7], [64.4, 108.0], [73.0, 119.8], [89.0, 121.0], [107.1, 121.0], [125.2, 121.0], [132.3, 108.7], [137.0, 94.3], [137.0, 76.3], [137.0, 58.2], [125.1, 49.1], [109.1, 47.0], [91.1, 47.0]], "right": [[209.0, 70.0], [197.4, 75.0], [181.9, 75.0], [168.1, 77.0], [152.6, 77.0], [147.0, 88.0], [147.0, 103.4], [153.0, 114.7], [162.9, 122.0], [178.3, 122.0], [193.4, 121.0], [208.6, 121.6], [218.0, 115.2], [223.0, 103.6], [223.0, 88.1], [221.3, 73.3]]},
+    "sus": {"left": [[81.0, 67.0], [76.0, 74.8], [76.0, 86.4], [81.1, 94.1], [91.3, 96.0], [102.9, 96.0], [114.5, 96.0], [126.1, 96.0], [137.7, 96.0], [142.0, 87.5], [142.0, 75.9], [135.0, 71.0], [127.4, 67.0], [115.8, 67.0], [104.2, 67.0], [92.6, 67.0]], "right": [[180.0, 70.0], [170.1, 72.0], [159.1, 73.0], [156.0, 81.2], [156.6, 92.0], [165.1, 96.0], [176.4, 96.0], [187.8, 96.0], [199.1, 96.0], [210.5, 96.0], [219.3, 92.7], [223.0, 84.1], [222.1, 73.1], [214.0, 70.0], [202.7, 70.0], [191.3, 70.0]]},
+    "Squint": {"left": [[62.0, 67.0], [60.0, 76.8], [67.7, 81.0], [78.4, 81.0], [89.0, 81.0], [99.7, 81.0], [110.4, 81.0], [121.0, 81.0], [131.2, 81.8], [133.0, 71.9], [126.0, 67.0], [115.4, 67.0], [104.7, 67.0], [94.0, 67.0], [83.3, 67.0], [72.7, 67.0]], "right": [[147.0, 67.0], [147.0, 77.7], [153.5, 82.0], [163.8, 81.0], [174.5, 81.0], [185.2, 81.0], [196.0, 81.0], [206.7, 81.0], [217.4, 81.0], [219.0, 71.3], [211.4, 67.0], [200.6, 67.0], [189.9, 67.0], [179.2, 67.0], [168.5, 67.0], [157.7, 67.0]]},
+    "sleepy": {"left": [[125.0, 61.0], [113.1, 64.0], [99.4, 64.0], [86.1, 64.9], [78.0, 71.1], [78.0, 84.8], [78.5, 98.0], [89.0, 103.0], [102.7, 103.0], [116.4, 103.0], [127.7, 100.0], [141.4, 100.0], [148.0, 92.3], [149.0, 79.0], [146.7, 67.0], [138.3, 62.0]], "right": [[161.0, 77.0], [161.0, 87.7], [166.5, 92.0], [177.1, 92.0], [187.8, 92.0], [195.0, 96.0], [205.7, 96.0], [216.3, 96.0], [227.0, 96.0], [228.0, 86.3], [217.7, 86.0], [207.3, 85.3], [199.2, 82.0], [188.6, 82.0], [178.2, 81.2], [171.7, 77.0]]},
+    "Focused_or_Determined": {"left": [[68.0, 59.0], [62.5, 68.5], [63.0, 81.8], [67.5, 91.0], [80.9, 91.0], [94.3, 91.0], [107.8, 91.0], [121.2, 91.0], [134.6, 91.0], [140.0, 82.7], [140.0, 69.2], [135.1, 59.1], [121.7, 59.0], [108.2, 59.0], [94.8, 59.0], [81.4, 59.0]], "right": [[156.0, 59.0], [151.0, 68.6], [151.0, 82.1], [156.8, 91.0], [170.2, 91.0], [183.7, 91.0], [197.2, 91.0], [210.6, 91.0], [224.1, 90.9], [229.0, 81.2], [229.0, 67.8], [222.5, 59.0], [209.9, 59.0], [196.4, 59.0], [182.9, 59.0], [169.5, 59.0]]}
+  };
 
-  <div class="bottom-controls">
-    <div class="filters-panel frosted-panel">
-      <div class="filter-option active" data-filter="none">
-        <div class="filter-thumb thumb-orig">
-          <video class="thumb-video" playsinline autoplay muted></video>
-        </div>
-        <span class="filter-label">ORIGINAL</span>
-      </div>
-      <div class="filter-option" data-filter="grayscale(100%)">
-        <div class="filter-thumb thumb-bw">
-          <video class="thumb-video" playsinline autoplay muted></video>
-        </div>
-        <span class="filter-label">B/W</span>
-      </div>
-      <div class="filter-option" data-filter="sepia(0.4) contrast(1.2) brightness(0.9) saturate(1.2)">
-        <div class="filter-thumb thumb-film">
-          <video class="thumb-video" playsinline autoplay muted></video>
-        </div>
-        <span class="filter-label">FILM VIBE</span>
-      </div>
-    </div>
+  SHAPES["Love"] = { "left": SHAPES["Awe"].left, "right": SHAPES["Awe"].right };
+  SHAPES["Mischievous"] = { "left": SHAPES["Squint"].left, "right": SHAPES["Neutral"].right };
+  SHAPES["Processing"] = { "left": SHAPES["Blink"].left, "right": SHAPES["Blink"].right };
+  SHAPES["Dizzy"] = { "left": SHAPES["sus"].left, "right": SHAPES["surprised"].right };
+  SHAPES["Relieved"] = { "left": SHAPES["Sad__look_down_"].left, "right": SHAPES["Sad__look_down_"].right };
 
-    <div class="zoom-controls frosted-panel" id="zoom-panel"></div>
+  const ORDER = Object.keys(SHAPES);
+  const CANDIDATES = ORDER.filter(k => k !== 'Blink' && k !== 'Neutral');
+  
+  const COLOR_NEUTRAL = "#ffffff";
+  const COLOR_GREEN   = "#32d74b";
+  const COLOR_BLUE    = "#0a84ff"; 
+  const COLOR_ORANGE  = "#ff9f0a"; 
+  const COLOR_RED     = "#ff453a"; 
+  const COLOR_PURPLE  = "#bf5af2"; 
+  const COLOR_PINK    = "#ff2d55"; 
 
-    <div class="shutter-row">
-      <div class="icon-btn frosted-panel" id="gallery-thumb">
-        <svg id="gallery-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-          <circle cx="8.5" cy="8.5" r="1.5"></circle>
-          <polyline points="21 15 16 10 5 21"></polyline>
-        </svg>
-      </div>
-      
-      <button class="shutter-btn" id="shutter-btn"></button>
-      
-      <div class="icon-btn frosted-panel" id="flip-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="1 4 1 10 7 10"></polyline>
-          <polyline points="23 20 23 14 17 14"></polyline>
-          <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
-        </svg>
-      </div>
-    </div>
+  const EXPR_DATA = {
+    "Neutral":               { c: COLOR_NEUTRAL, m: [[125,135], [135,135], [145,135], [155,135], [165,135]], h: null, mo: 0 },
+    "Blink":                 { c: COLOR_NEUTRAL, m: [[125,135], [135,135], [145,135], [155,135], [165,135]], h: null, mo: 0 },
+    "Happy":                 { c: COLOR_GREEN,   m: [[120,130], [130,145], [145,150], [160,145], [170,130]], h: null, mo: 1 },
+    "Glee":                  { c: COLOR_GREEN,   m: [[115,125], [130,148], [145,155], [160,148], [175,125]], h: "hud-glee", mo: 1 },
+    "Awe":                   { c: COLOR_BLUE,    m: [[145,125], [155,135], [145,145], [135,135], [145,125]], h: null, mo: 1 },
+    "surprised":             { c: COLOR_ORANGE,  m: [[145,130], [150,135], [145,140], [140,135], [145,130]], h: "hud-surprised", mo: 1 },
+    "Scared":                { c: COLOR_ORANGE,  m: [[130,145], [137,135], [145,132], [153,135], [160,145]], h: "hud-scared", mo: 1 },
+    "worry":                 { c: COLOR_ORANGE,  m: [[130,138], [137,134], [145,132], [152,134], [160,138]], h: "hud-scared", mo: 0 },
+    "sad__look_at_user_":    { c: COLOR_BLUE,    m: [[125,145], [135,135], [145,133], [155,135], [165,145]], h: null, mo: 0 },
+    "Sad__look_down_":       { c: COLOR_BLUE,    m: [[128,142], [136,138], [145,136], [154,138], [162,142]], h: null, mo: 0 },
+    "Furious":               { c: COLOR_RED,     m: [[125,142], [135,132], [145,142], [155,132], [165,142]], h: "hud-furious", mo: 1 },
+    "angery":                { c: COLOR_RED,     m: [[128,138], [136,134], [145,138], [154,134], [162,138]], h: "hud-furious", mo: 1 },
+    "annoyed":               { c: COLOR_RED,     m: [[125,132], [135,135], [145,135], [155,135], [165,138]], h: null, mo: 0 },
+    "Frustrated_or_Bored":   { c: COLOR_NEUTRAL, m: [[125,135], [135,135], [145,135], [155,135], [165,135]], h: null, mo: 0 },
+    "Unimpressed":           { c: COLOR_NEUTRAL, m: [[128,136], [136,136], [145,136], [154,136], [162,136]], h: null, mo: 0 },
+    "Skeptic":               { c: COLOR_PURPLE,  m: [[125,135], [135,135], [145,132], [155,128], [165,122]], h: "hud-skeptic", mo: 1 },
+    "sus":                   { c: COLOR_PURPLE,  m: [[128,135], [136,135], [145,133], [154,131], [162,129]], h: null, mo: 0 },
+    "Squint":                { c: COLOR_NEUTRAL, m: [[130,135], [137,135], [145,135], [152,135], [160,135]], h: null, mo: 0 },
+    "sleepy":                { c: COLOR_BLUE,    m: [[135,138], [140,140], [145,142], [150,140], [155,138]], h: "hud-sleepy", mo: 0 },
+    "Focused_or_Determined": { c: COLOR_NEUTRAL, m: [[132,135], [138,135], [145,135], [152,135], [158,135]], h: null, mo: 0 },
+    "Love":                  { c: COLOR_PINK,    m: [[120,130], [135,148], [145,152], [155,148], [170,130]], h: "hud-love", mo: 1 },
+    "Mischievous":           { c: COLOR_PURPLE,  m: [[125,135], [135,135], [145,135], [155,130], [165,125]], h: null, mo: 1 },
+    "Processing":            { c: COLOR_BLUE,    m: [[135,135], [140,135], [145,135], [150,135], [155,135]], h: "hud-processing", mo: 0 },
+    "Dizzy":                 { c: COLOR_ORANGE,  m: [[125,140], [135,130], [145,145], [155,130], [165,140]], h: "hud-dizzy", mo: 1 },
+    "Relieved":              { c: COLOR_GREEN,   m: [[130,135], [137,140], [145,142], [152,140], [160,135]], h: null, mo: 1 }
+  };
 
-    <div class="status-text" id="status-msg">READY TO SHOOT</div>
-  </div>
+  const pathLeft = document.getElementById('pathLeft');
+  const pathRight = document.getElementById('pathRight');
+  const pathMouth = document.getElementById('pathMouth');
+  const eyesGroup = document.getElementById('eyesGroup');
+  const liveDot = document.getElementById('liveDot');
+  const svgEl = document.getElementById('svg');
 
-  <canvas id="photo-canvas" style="display:none;"></canvas>
+  function catmullRomToBezier(pts, closed = true) {
+    const n = pts.length;
+    if (n === 0) return '';
+    let d = `M ${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)} `;
+    if (closed) {
+      for (let i = 0; i < n; i++) {
+        const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+        const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+        const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+        d += `C ${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)} `;
+      }
+      return d + 'Z';
+    } else {
+      for (let i = 0; i < n - 1; i++) {
+        const p0 = i === 0 ? pts[0] : pts[i - 1], p1 = pts[i], p2 = pts[i + 1], p3 = i + 2 < n ? pts[i + 2] : p2;
+        const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+        const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+        d += `C ${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)} `;
+      }
+      return d;
+    }
+  }
 
-  <script>
-    const video = document.getElementById('camera-stream');
-    const thumbVideos = document.querySelectorAll('.thumb-video');
-    const flash = document.getElementById('flash');
-    const galleryThumb = document.getElementById('gallery-thumb');
-    const galleryIcon = document.getElementById('gallery-icon');
-    const photoCountDisplay = document.getElementById('photo-count-display');
-    const zoomPanel = document.getElementById('zoom-panel');
-    const canvas = document.getElementById('photo-canvas');
-    const ctx = canvas.getContext('2d');
+  function smootherstep(t) { return t * t * (3 - 2 * t); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
+  function lerpPts(a, b, t) { return a.map((p, i) => [p[0] + (b[i][0] - p[0]) * t, p[1] + (b[i][1] - p[1]) * t]); }
+
+  let curLeft = SHAPES['Neutral'].left.map(p => p.slice());
+  let curRight = SHAPES['Neutral'].right.map(p => p.slice());
+  let curMouth = EXPR_DATA['Neutral'].m.map(p => p.slice());
+  
+  let baseExpr = 'Neutral';
+  let currentExpr = 'Neutral';
+  let morphAnim = null;
+
+  let running = true;
+  let currentSpeedKmh = 0;
+  let drivingArousalBoost = 0;     
+  let driveTiltX = 0, driveTiltY = 0, driveRoll = 0;
+  let smoothedForward = 0; 
+  
+  const exprMenu = document.getElementById('exprMenu');
+  const hiddenTrigger = document.getElementById('hiddenTrigger');
+  let debugMode = false;
+  let debugTimer = null;
+
+  ORDER.forEach(key => {
+    const btn = document.createElement('div');
+    btn.className = 'expr-btn';
+    btn.textContent = key.replace(/_/g, ' '); 
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      resetDebugTimer();
+      baseExpr = key;
+      morphTo(key, 350);
+    };
+    exprMenu.appendChild(btn);
+  });
+
+  function resetDebugTimer() {
+    debugMode = true;
+    exprMenu.classList.add('open');
+    clearTimeout(debugTimer);
+    debugTimer = setTimeout(() => {
+      debugMode = false;
+      exprMenu.classList.remove('open');
+      baseExpr = 'Neutral';
+      morphTo('Neutral', 400);
+    }, 5000);
+  }
+
+  hiddenTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    resetDebugTimer();
+  });
+
+  function applyPhysics(pts) {
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (let p of pts) {
+      if (p[0] < minX) minX = p[0]; if (p[0] > maxX) maxX = p[0];
+      if (p[1] < minY) minY = p[1]; if (p[1] > maxY) maxY = p[1];
+    }
+    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+    const sf = clamp(smoothedForward, -8, 8);
+    const sx = 1 + (sf * 0.035), sy = 1 - (sf * 0.035); 
+    const skew = driveTiltX * -0.025; 
+    let jx = 0, jy = 0;
+    if (drivingArousalBoost > 0.6) {
+      const intensity = (drivingArousalBoost - 0.6) * 2.5;
+      jx = (Math.random() - 0.5) * 2 * intensity;
+      jy = (Math.random() - 0.5) * 2 * intensity;
+    }
+    return pts.map(p => {
+      let dx = p[0] - cx, dy = p[1] - cy;
+      dx += dy * skew; 
+      return [cx + (dx * sx) + jx, cy + (dy * sy) + jy];
+    });
+  }
+
+  function render() {
+    pathLeft.setAttribute('d', catmullRomToBezier(applyPhysics(curLeft), true));
+    pathRight.setAttribute('d', catmullRomToBezier(applyPhysics(curRight), true));
+    pathMouth.setAttribute('d', catmullRomToBezier(applyPhysics(curMouth), false));
+  }
+
+  function morphTo(key, duration, cb) {
+    cancelAnimationFrame(morphAnim);
+    const startL = curLeft.map(p => p.slice()), startR = curRight.map(p => p.slice());
+    const startM = curMouth.map(p => p.slice());
     
-    let currentStream = null;
-    let useFrontCamera = false;
-    let activeFilter = 'none';
-    let currentZoom = 1;
-    let photoCount = 12;
-    let lensesDetected = false;
+    const endL = SHAPES[key].left, endR = SHAPES[key].right;
+    const endM = EXPR_DATA[key].m;
+    const targetColor = EXPR_DATA[key].c;
+    const targetHUD = EXPR_DATA[key].h;
 
-    async function setupDynamicZoom() {
-      if (lensesDetected) return; 
-      zoomPanel.innerHTML = ''; 
-      
-      let availableZooms = new Set([1, 2]); 
-      
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoInputs = devices.filter(d => d.kind === 'videoinput');
-        
-        let backCameraCount = 0;
-        
-        videoInputs.forEach(device => {
-          const label = device.label.toLowerCase();
-          if (label.includes('back') || label.includes('environment')) {
-            backCameraCount++;
-            if (label.includes('ultra') || label.includes('0.5')) availableZooms.add(0.5);
-            if (label.includes('tele') || label.includes('3x')) availableZooms.add(3);
-          }
-        });
+    eyesGroup.style.fill = targetColor;
+    pathMouth.style.stroke = targetColor;
+    pathMouth.style.opacity = EXPR_DATA[key].mo !== undefined ? EXPR_DATA[key].mo : 1;
+    
+    document.querySelectorAll('.hud-item').forEach(el => el.classList.remove('active'));
+    if (targetHUD) document.getElementById(targetHUD).classList.add('active');
 
-        if (backCameraCount >= 3) {
-          availableZooms.add(0.5);
-          availableZooms.add(3);
+    const t0 = performance.now();
+    function step(now) {
+      const t = Math.min(1, (now - t0) / duration);
+      const te = smootherstep(t);
+      curLeft = lerpPts(startL, endL, te);
+      curRight = lerpPts(startR, endR, te);
+      curMouth = lerpPts(startM, endM, te);
+      if (t < 1) { morphAnim = requestAnimationFrame(step); }
+      else { currentExpr = key; if (cb) cb(); }
+    }
+    morphAnim = requestAnimationFrame(step);
+  }
+
+  let lastActivity = performance.now();
+  function markActivity() { lastActivity = performance.now(); }
+  function idleSeconds() { return (performance.now() - lastActivity) / 1000; }
+
+  let pointer = { x: null, y: null };
+  function setPointer(clientX, clientY) {
+    const r = svgEl.getBoundingClientRect();
+    pointer.x = (clientX - r.left) / r.width;   
+    pointer.y = (clientY - r.top) / r.height;   
+    markActivity();
+  }
+  window.addEventListener('mousemove', e => setPointer(e.clientX, e.clientY));
+  window.addEventListener('touchmove', e => {
+    if (e.touches[0]) setPointer(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+  window.addEventListener('mousedown', markActivity);
+  window.addEventListener('touchstart', markActivity, { passive: true });
+  window.addEventListener('keydown', markActivity);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) markActivity(); });
+
+  let gazeX = 0, gazeY = 0;       
+  let wanderTarget = { x: 0, y: 0 };
+  function pickWanderTarget() {
+    wanderTarget.x = (Math.random() - 0.5) * 2;
+    wanderTarget.y = (Math.random() - 0.5) * 2;
+    setTimeout(pickWanderTarget, 1800 + Math.random() * 2600);
+  }
+  pickWanderTarget();
+
+  let microJitterX = 0, microJitterY = 0, microJitterUntil = 0;
+  function maybeMicroSaccade() {
+    if (Math.random() < 0.5) {
+      microJitterX = (Math.random() - 0.5) * 3;
+      microJitterY = (Math.random() - 0.5) * 1.6;
+      microJitterUntil = performance.now() + 120 + Math.random() * 160;
+    }
+    setTimeout(maybeMicroSaccade, 350 + Math.random() * 500);
+  }
+  maybeMicroSaccade();
+
+  function updateGaze() {
+    const usingPointer = pointer.x !== null && idleSeconds() < 6;
+    let tx, ty;
+    if (usingPointer) {
+      tx = (pointer.x - 0.5) * 2;
+      ty = (pointer.y - 0.5) * 2;
+    } else {
+      tx = wanderTarget.x;
+      ty = wanderTarget.y;
+    }
+    const maxOffset = 7; 
+    let jx = 0, jy = 0;
+    if (performance.now() < microJitterUntil) { jx = microJitterX; jy = microJitterY; }
+    gazeX = lerp(gazeX, tx * maxOffset + jx, 0.06);
+    gazeY = lerp(gazeY, ty * maxOffset * 0.5 + jy, 0.06);
+    const ex = gazeX + driveTiltX, ey = gazeY + driveTiltY;
+    eyesGroup.setAttribute('transform', `translate(${ex.toFixed(1)},${ey.toFixed(1)})`);
+  }
+
+  let breatheStart = performance.now();
+  let lastOrientAt = 0;
+
+  function mainLoop(now) {
+    updateGaze();
+
+    if (performance.now() - lastOrientAt > 1200) {
+      driveTiltX = lerp(driveTiltX, 0, 0.04);
+      driveTiltY = lerp(driveTiltY, 0, 0.04);
+      driveRoll = lerp(driveRoll, 0, 0.04);
+      smoothedForward = lerp(smoothedForward, 0, 0.04);
+    }
+
+    const arousalNorm = clamp(drivingArousalBoost, 0, 1);
+    const t = (now - breatheStart) / 1000;
+    const speed = lerp(0.9, 1.6, arousalNorm);
+    const s = 1 + Math.sin(t * speed) * 0.012;
+    svgEl.style.transform = `scale(${s}) rotate(${driveRoll.toFixed(2)}deg)`;
+
+    render();
+    requestAnimationFrame(mainLoop);
+  }
+  requestAnimationFrame(mainLoop);
+
+  const driveBtn = document.getElementById('driveBtn');
+  let driveEnabled = false;
+  let orientBaseline = { beta: 0, gamma: 0 };
+  let lastGamma = null, lastGammaTime = performance.now();
+  let lastReactAt = 0;
+
+  function calibrateBaseline(beta, gamma) {
+    orientBaseline.beta = beta || 0;
+    orientBaseline.gamma = gamma || 0;
+  }
+
+  function driveReact(key, dv, da, snapBack) {
+    const now = performance.now();
+    if (now - lastReactAt < 500) return;
+    lastReactAt = now;
+    markActivity();
+    morphTo(key, 110, () => {
+      setTimeout(() => { if (running && !debugMode) morphTo(baseExpr, snapBack || 300); }, 450);
+    });
+  }
+
+  function handleOrientation(e) {
+    if (e.beta === null || e.gamma === null) return;
+    lastOrientAt = performance.now();
+    const pitch = clamp((e.beta - orientBaseline.beta) / 30, -1, 1);   
+    const roll  = clamp((e.gamma - orientBaseline.gamma) / 30, -1, 1); 
+
+    driveTiltX = lerp(driveTiltX, roll * 9, 0.15);
+    driveTiltY = lerp(driveTiltY, -pitch * 5, 0.15);
+    driveRoll  = lerp(driveRoll, roll * 4, 0.12);
+
+    const now = performance.now();
+    const dt = (now - lastGammaTime) / 1000;
+    
+    if (lastGamma !== null && dt > 0) {
+      const rate = (e.gamma - lastGamma) / dt; 
+      if (Math.abs(rate) > 40) {
+        if (Math.abs(rate) > 130 && drivingArousalBoost > 0.3) {
+            driveReact('Dizzy', -0.2, 0.5, 1500); 
+        } else if (drivingArousalBoost > 0.6) {
+            driveReact(Math.abs(rate) > 90 ? 'Scared' : 'worry', -0.1, 0.35); 
+        } else if (drivingArousalBoost > 0.15) {
+            driveReact('Focused_or_Determined', 0.0, 0.2); 
         }
-      } catch (e) {
-        console.warn("Could not read device labels.");
       }
+    }
+    lastGamma = e.gamma; lastGammaTime = now;
 
-      const sortedZooms = Array.from(availableZooms).sort((a, b) => a - b);
-      
-      sortedZooms.forEach(z => {
-        const span = document.createElement('span');
-        span.className = 'zoom-btn' + (z === 1 ? ' active' : '');
-        span.innerText = z + 'x';
-        
-        span.addEventListener('click', async (e) => {
-          document.querySelectorAll('.zoom-btn').forEach(el => el.classList.remove('active'));
-          e.target.classList.add('active');
-          
-          currentZoom = z;
-          applyZoom(currentZoom);
-        });
-        
-        zoomPanel.appendChild(span);
+    if (Math.abs(pitch) > 0.55 && Math.random() < 0.015) {
+      driveReact(pitch > 0 ? 'Awe' : 'surprised', pitch > 0 ? 0.1 : -0.1, 0.2, 260);
+    }
+  }
+
+  function handleMotion(e) {
+    const a = e.acceleration && (e.acceleration.y || e.acceleration.x)
+      ? e.acceleration : e.accelerationIncludingGravity;
+    if (!a) return;
+    const forward = a.y || 0;
+    smoothedForward = lerp(smoothedForward, forward, 0.25);
+
+    if (drivingArousalBoost > 0.1) {
+      if (smoothedForward < -6 && drivingArousalBoost > 0.5) {
+          driveReact('Scared', -0.3, 0.5); 
+      } else if (smoothedForward < -4) {
+          driveReact('surprised', -0.1, 0.3); 
+      } else if (smoothedForward > 5) {
+          driveReact('Glee', 0.3, 0.5); 
+      }
+    }
+  }
+
+  async function enableDriveMode() {
+    if (driveEnabled) return;
+    try {
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        if (await DeviceOrientationEvent.requestPermission() !== 'granted') return;
+      }
+      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+        if (await DeviceMotionEvent.requestPermission() !== 'granted') return;
+      }
+      window.addEventListener('deviceorientation', e => {
+        if (orientBaseline.beta === 0 && orientBaseline.gamma === 0) calibrateBaseline(e.beta, e.gamma);
+        handleOrientation(e);
       });
-      
-      lensesDetected = true;
-    }
-
-    async function applyZoom(zoomValue) {
-      if (!currentStream) return;
-      const track = currentStream.getVideoTracks()[0];
-      const capabilities = track.getCapabilities ? track.getCapabilities() : {};
-      const mirrorTransform = useFrontCamera ? 'scaleX(-1)' : '';
-
-      if (capabilities.zoom) {
-         try {
-           await track.applyConstraints({ advanced: [{ zoom: zoomValue }] });
-           video.style.transform = `scale(1) ${mirrorTransform}`; 
-         } catch (err) {
-           video.style.transform = `scale(${zoomValue}) ${mirrorTransform}`;
-         }
-      } else {
-         video.style.transform = `scale(${zoomValue}) ${mirrorTransform}`;
+      window.addEventListener('devicemotion', handleMotion);
+      if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(pos => {
+          const speed = pos.coords.speed; 
+          if (speed !== null && speed >= 0) {
+            currentSpeedKmh = speed * 3.6;
+            drivingArousalBoost = clamp(currentSpeedKmh / 80, 0, 1);
+          }
+        }, () => {}, { enableHighAccuracy: true, maximumAge: 2000 });
       }
-    }
+      driveEnabled = true;
+      driveBtn.classList.add('on');
+      driveBtn.style.display = 'none'; 
+    } catch (err) { console.warn('Drive mode sensor permission error', err); }
+  }
 
-    async function startCamera() {
-      if (currentStream) {
-        currentStream.getTracks().forEach(track => track.stop());
-      }
+  driveBtn.addEventListener('click', enableDriveMode);
 
-      const constraints = {
-        video: {
-          facingMode: useFrontCamera ? "user" : "environment",
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        },
-        audio: false
-      };
+  const simPanel = document.getElementById('simPanel');
+  const simToggle = document.getElementById('simToggle');
+  const simSpeed = document.getElementById('simSpeed');
+  const simSpeedVal = document.getElementById('simSpeedVal');
 
-      try {
-        currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-        
-        video.srcObject = currentStream;
-        
-        thumbVideos.forEach(v => {
-          v.srcObject = currentStream;
-          v.style.transform = useFrontCamera ? 'scaleX(-1)' : '';
-        });
-        
-        currentZoom = 1; 
-        applyZoom(currentZoom);
-        
-        await setupDynamicZoom();
-        
-        document.querySelectorAll('.zoom-btn').forEach(el => {
-          el.classList.toggle('active', el.innerText === '1x');
-        });
+  simToggle.addEventListener('click', () => {
+    simPanel.classList.toggle('open');
+    simToggle.classList.toggle('open');
+  });
 
-        document.getElementById('status-msg').innerText = "READY TO SHOOT";
-      } catch (err) {
-        console.error("Camera Error:", err);
-        document.getElementById('status-msg').innerText = "CAMERA ACCESS DENIED";
-      }
-    }
-
-    document.getElementById('flip-btn').addEventListener('click', () => {
-      useFrontCamera = !useFrontCamera;
-      startCamera();
+  function simLean(dir) { 
+    lastOrientAt = performance.now();
+    driveTiltX = dir * 9; driveRoll = dir * 4;
+  }
+  const SIM_ACTIONS = {
+    turnL: () => { simLean(-1); 
+        if (currentSpeedKmh > 70) driveReact('Scared', -0.1, 0.35); 
+        else if (currentSpeedKmh > 40) driveReact('worry', -0.05, 0.25);
+        else if (currentSpeedKmh > 10) driveReact('Focused_or_Determined', 0, 0.15);
+    },
+    turnR: () => { simLean(1); 
+        if (currentSpeedKmh > 70) driveReact('Scared', -0.1, 0.35); 
+        else if (currentSpeedKmh > 40) driveReact('worry', -0.05, 0.25);
+        else if (currentSpeedKmh > 10) driveReact('Focused_or_Determined', 0, 0.15);
+    },
+    brake: () => { lastOrientAt = performance.now(); smoothedForward = -6; 
+        if (currentSpeedKmh > 50) driveReact('Scared', -0.3, 0.5);
+        else if (currentSpeedKmh > 10) driveReact('surprised', -0.1, 0.3);
+    },
+    accel: () => { lastOrientAt = performance.now(); smoothedForward = 6; driveReact('Glee', 0.3, 0.5); },
+    hillUp: () => driveReact('Awe', 0.1, 0.2, 260),
+    hillDown: () => driveReact('surprised', -0.1, 0.2, 260),
+    tiltL: () => simLean(-1),
+    tiltR: () => simLean(1),
+    spin: () => { driveTiltX = 20; driveRoll = 15; driveReact('Dizzy', -0.2, 0.5, 1500); }
+  };
+  simPanel.querySelectorAll('[data-sim]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      lastReactAt = 0; 
+      SIM_ACTIONS[btn.dataset.sim]();
     });
+  });
+  simSpeed.addEventListener('input', () => {
+    currentSpeedKmh = Number(simSpeed.value);
+    drivingArousalBoost = clamp(currentSpeedKmh / 80, 0, 1);
+    simSpeedVal.textContent = currentSpeedKmh + ' km/h';
+  });
 
-    document.querySelectorAll('.filter-option').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.filter-option').forEach(el => el.classList.remove('active'));
-        e.currentTarget.classList.add('active');
-        activeFilter = e.currentTarget.getAttribute('data-filter');
-        video.style.filter = activeFilter;
+  let keysDown = new Set();
+  let simSpeedKmh = 0;
+
+  window.addEventListener('keydown', e => {
+    if (!simPanel.classList.contains('open')) return;
+    const k = e.key.toLowerCase();
+    if (!['w', 'a', 's', 'd'].includes(k)) return;
+    e.preventDefault();
+    if (keysDown.has(k)) return; 
+    keysDown.add(k);
+    lastReactAt = 0; 
+    
+    if (k === 'w' && currentSpeedKmh < 15) driveReact('Glee', 0.3, 0.5);
+    if (k === 's' && currentSpeedKmh > 40) driveReact('Scared', -0.3, 0.5);
+    else if (k === 's' && currentSpeedKmh > 10) driveReact('surprised', -0.1, 0.3);
+    
+    if (k === 'a' || k === 'd') {
+      if (currentSpeedKmh > 70) driveReact('Scared', -0.1, 0.35);
+      else if (currentSpeedKmh > 40) driveReact('worry', -0.05, 0.25);
+      else if (currentSpeedKmh > 10) driveReact('Focused_or_Determined', 0, 0.15);
+    }
+  });
+  window.addEventListener('keyup', e => keysDown.delete(e.key.toLowerCase()));
+
+  setInterval(() => {
+    if (!simPanel.classList.contains('open')) return;
+    if (keysDown.has('w')) {
+      simSpeedKmh = clamp(simSpeedKmh + 4, 0, 120);
+      smoothedForward = lerp(smoothedForward, 5, 0.2); 
+      lastOrientAt = performance.now();
+    }
+    else if (keysDown.has('s')) {
+      simSpeedKmh = clamp(simSpeedKmh - 6, 0, 120);
+      smoothedForward = lerp(smoothedForward, -6, 0.2); 
+      lastOrientAt = performance.now();
+    }
+    else {
+      simSpeedKmh = clamp(simSpeedKmh - 1, 0, 120); 
+    }
+
+    currentSpeedKmh = simSpeedKmh;
+    drivingArousalBoost = clamp(currentSpeedKmh / 80, 0, 1);
+    simSpeed.value = currentSpeedKmh;
+    simSpeedVal.textContent = Math.round(currentSpeedKmh) + ' km/h';
+
+    if (keysDown.has('a')) {
+      lastOrientAt = performance.now();
+      driveTiltX = lerp(driveTiltX, -9, 0.3); driveRoll = lerp(driveRoll, -4, 0.3);
+    } else if (keysDown.has('d')) {
+      lastOrientAt = performance.now();
+      driveTiltX = lerp(driveTiltX, 9, 0.3); driveRoll = lerp(driveRoll, 4, 0.3);
+    }
+  }, 80);
+
+  function blinkLoop() {
+    if (running && currentExpr === baseExpr && !debugMode) {
+      const tiredness = (drivingArousalBoost > 0.2) ? 0 : clamp(idleSeconds() / 90, 0, 0.4);
+      const closeDur = lerp(70, 160, tiredness);
+      const holdDur = lerp(60, 260, tiredness);
+      morphTo('Blink', closeDur, () => {
+        setTimeout(() => { if (running && !debugMode) morphTo(baseExpr, closeDur + 20); }, holdDur);
       });
+    }
+    const base = 2200 + Math.random() * 3000;
+    setTimeout(blinkLoop, base);
+  }
+  setTimeout(blinkLoop, 2000);
+
+  function getRandomExpression() {
+    let allowed = [...CANDIDATES];
+    if (currentSpeedKmh > 5) {
+        allowed = allowed.filter(k => !['sleepy', 'Sad__look_down_', 'Frustrated_or_Bored', 'sad__look_at_user_', 'Processing'].includes(k));
+    }
+    if (currentSpeedKmh > 50) {
+        allowed = ['Focused_or_Determined', 'Glee', 'Happy', 'Awe', 'surprised', 'Scared', 'worry', 'Furious', 'angery', 'Love', 'Mischievous'];
+    } 
+    else if (currentSpeedKmh >= 20 && currentSpeedKmh <= 40 && Math.abs(smoothedForward) < 2.5) {
+        allowed = ['Neutral', 'Happy', 'Relieved', 'Squint', 'Mischievous'];
+    }
+
+    const randomIdx = Math.floor(Math.random() * allowed.length);
+    return allowed[randomIdx];
+  }
+
+  function randomCognitiveLoop() {
+    if (running && !debugMode) {
+      const newExpr = getRandomExpression();
+      if (newExpr !== baseExpr && currentExpr === baseExpr) {
+        baseExpr = newExpr;
+        const morphDur = 150 + Math.random() * 450; 
+        morphTo(baseExpr, morphDur);
+      }
+    }
+    
+    let randomHoldTime;
+    if (currentSpeedKmh > 50) {
+        randomHoldTime = 8000 + (Math.random() * 17000); 
+    } else if (currentSpeedKmh >= 20 && currentSpeedKmh <= 40 && Math.abs(smoothedForward) < 2.5) {
+        randomHoldTime = 20000 + (Math.random() * 40000);
+    } else if (currentSpeedKmh > 5) {
+        randomHoldTime = 15000 + (Math.random() * 25000);
+    } else {
+        randomHoldTime = 40000 + (Math.random() * 140000);
+    }
+
+    setTimeout(randomCognitiveLoop, randomHoldTime);
+  }
+  setTimeout(randomCognitiveLoop, 3000);
+
+  document.querySelector('.stage').addEventListener('click', () => {
+    if (!running || debugMode) return;
+    markActivity();
+    const key = getRandomExpression();
+    morphTo(key, 160, () => {
+      setTimeout(() => { if (running && !debugMode) morphTo(baseExpr, 300); }, 500 + Math.random() * 400);
     });
+  });
 
-    document.getElementById('shutter-btn').addEventListener('click', () => {
-      if (!currentStream) return;
-
-      flash.style.opacity = '1';
-      setTimeout(() => flash.style.opacity = '0', 100);
-
-      // Enforce the 4:3 (3:4 vertical) crop on the actual saved image
-      const targetRatio = 3 / 4; 
-      const videoRatio = video.videoWidth / video.videoHeight;
-      
-      let cropWidth = video.videoWidth;
-      let cropHeight = video.videoHeight;
-      let startX = 0;
-      let startY = 0;
-
-      if (videoRatio > targetRatio) {
-        cropWidth = video.videoHeight * targetRatio;
-        startX = (video.videoWidth - cropWidth) / 2;
-      } else {
-        cropHeight = video.videoWidth / targetRatio;
-        startY = (video.videoHeight - cropHeight) / 2;
-      }
-
-      canvas.width = cropWidth;
-      canvas.height = cropHeight;
-      ctx.filter = activeFilter;
-
-      if (useFrontCamera) {
-        ctx.translate(canvas.width, 0);
-        ctx.scale(-1, 1);
-      }
-
-      let finalCropWidth = cropWidth;
-      let finalCropHeight = cropHeight;
-      let finalStartX = startX;
-      let finalStartY = startY;
-
-      // Handle CSS digital zoom cropping
-      if (currentZoom > 1 && video.style.transform.includes(`scale(${currentZoom})`)) {
-        finalCropWidth = cropWidth / currentZoom;
-        finalCropHeight = cropHeight / currentZoom;
-        finalStartX = startX + (cropWidth - finalCropWidth) / 2;
-        finalStartY = startY + (cropHeight - finalCropHeight) / 2;
-      }
-
-      ctx.drawImage(video, finalStartX, finalStartY, finalCropWidth, finalCropHeight, 0, 0, canvas.width, canvas.height);
-      
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-
-      const imgURL = canvas.toDataURL('image/jpeg');
-      galleryThumb.style.backgroundImage = `url(${imgURL})`;
-      galleryIcon.style.display = 'none';
-
-      photoCount++;
-      photoCountDisplay.innerText = photoCount;
-    });
-
-    startCamera();
-  </script>
+  liveDot.addEventListener('click', () => {
+    running = !running;
+    liveDot.classList.toggle('live', running);
+    if (running) { markActivity(); morphTo(baseExpr, 200); }
+  });
+  liveDot.classList.add('live');
+</script>
 </body>
 </html>
