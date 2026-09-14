@@ -2,764 +2,1981 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<!-- Optimized Viewport for Notches and Fullscreen -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-
-<!-- Progressive Web App (PWA) Meta Tags -->
 <meta name="theme-color" content="#000000">
-<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Companion">
-
-<!-- Embedded JSON Manifest for Android Installability -->
-<link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22Companion%22%2C%22short_name%22%3A%22Companion%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23000000%22%2C%22theme_color%22%3A%22%23000000%22%7D">
-
-<!-- Minimalist Embedded App Icon (Two eyes on black background) -->
-<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzAwMCIvPjxjaXJjbGUgY3g9IjM1IiBjeT0iNTAiIHI9IjEyIiBmaWxsPSIjZmZmIi8+PGNpcmNsZSBjeD0iNjUiIGN5PSI1MCIgcj0iMTIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=" type="image/svg+xml">
-<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzAwMCIvPjxjaXJjbGUgY3g9IjM1IiBjeT0iNTAiIHI9IjEyIiBmaWxsPSIjZmZmIi8+PGNpcmNsZSBjeD0iNjUiIGN5PSI1MCIgcj0iMTIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=">
-
-<title>Companion</title>
+<meta name="apple-mobile-web-app-title" content="GPS HUD">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<title>GPS HUD</title>
 <style>
-  /* App-like CSS Resets */
-  * { 
-    box-sizing:border-box; 
-    -webkit-tap-highlight-color:transparent; 
-    -webkit-user-select:none; 
-    user-select:none; 
-    -webkit-touch-callout:none; 
-  }
-  html,body { 
-    margin:0; width:100%; height:100%; 
-    background:#000; overflow:hidden; 
-    touch-action:none; /* Prevents pull-to-refresh */
-  }
-  
-  .stage { width:100vw; height:100vh; display:flex; align-items:center; justify-content:center; }
-  svg { width:min(90vw, 900px); height:auto; max-height:80vh; display:block; }
-  
-  /* Respect Safe Areas (Notches) for UI Elements */
-  .dot {
-    position:fixed; top:max(16px, env(safe-area-inset-top)); right:max(16px, env(safe-area-inset-right)); width:8px; height:8px; border-radius:50%;
-    background:#2a2a2a; box-shadow:0 0 6px rgba(255,255,255,0.05); cursor:pointer; z-index:10;
-  }
-  .dot.live { background:#32d74b; box-shadow:0 0 8px #32d74b; animation:pulse 1.6s ease-in-out infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
-  
-  .drive-btn {
-    position:fixed; top:max(14px, env(safe-area-inset-top)); right:max(34px, env(safe-area-inset-right)); width:26px; height:26px; border-radius:50%;
-    border:1px solid #333; background:#111; cursor:pointer; z-index:10; transition:all .2s;
-    display:flex; align-items:center; justify-content:center;
-  }
-  .drive-btn svg { width:14px; height:14px; stroke:#555; transition:stroke .2s; }
-  .drive-btn.on { border-color:#32d74b; box-shadow:0 0 8px rgba(50,215,75,0.4); }
-  .drive-btn.on svg { stroke:#32d74b; }
-  
-  .sim-toggle {
-    position:fixed; top:max(16px, env(safe-area-inset-top)); right:max(64px, env(safe-area-inset-right)); width:8px; height:8px; border-radius:50%;
-    background:#1a1a1a; cursor:pointer; z-index:10; transition:background .2s, box-shadow .2s;
-  }
-  .sim-toggle.open { background:#32d74b; box-shadow:0 0 8px #32d74b; }
-  
-  .sim-panel {
-    position:fixed; left:50%; bottom:max(18px, env(safe-area-inset-bottom)); transform:translateX(-50%) translateY(12px);
-    width:min(92vw, 360px); background:rgba(12,12,12,0.85); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
-    border:1px solid #262626; border-radius:12px;
-    padding:12px; z-index:20; opacity:0; pointer-events:none; transition:opacity .3s cubic-bezier(0.2,0.8,0.2,1), transform .3s cubic-bezier(0.2,0.8,0.2,1);
-    font:11px/1.4 -apple-system, system-ui, sans-serif; color:#777;
-  }
-  .sim-panel.open { opacity:1; pointer-events:auto; transform:translateX(-50%) translateY(0); }
-  .sim-row { display:flex; gap:6px; margin-bottom:8px; }
-  .sim-row:last-child { margin-bottom:0; }
-  .sim-btn {
-    flex:1; background:#181818; border:1px solid #2a2a2a; color:#bbb; border-radius:7px;
-    padding:7px 4px; font:11px inherit; cursor:pointer; text-align:center; transition:0.15s;
-  }
-  .sim-btn:active { background:#32d74b; color:#000; border-color:#32d74b; }
-  
-  .sim-slider-row { display:flex; align-items:center; gap:8px; }
-  .sim-slider-row input[type=range] { flex:1; accent-color:#32d74b; }
-  .sim-slider-row span { width:60px; text-align:right; color:#32d74b; font-weight:500; }
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+  -webkit-tap-highlight-color:transparent;
+  scrollbar-width:none !important;
+  -ms-overflow-style:none !important;
+}
+*::-webkit-scrollbar{
+  display:none !important;
+  width:0 !important;
+  height:0 !important;
+}
 
-  /* Premium Debug Menu */
-  .hidden-trigger { position:fixed; top:max(0px, env(safe-area-inset-top)); left:max(0px, env(safe-area-inset-left)); width:60px; height:60px; z-index:100; cursor:pointer; }
-  .expr-menu {
-    position:fixed; top:max(20px, env(safe-area-inset-top)); left:50%; transform:translateX(-50%);
-    width:min(95vw, 650px); display:flex; flex-wrap:wrap; gap:6px; justify-content:center;
-    background:rgba(15,15,15,0.75); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
-    border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:16px;
-    z-index:90; opacity:0; pointer-events:none; transition:opacity 0.25s ease-out;
-  }
-  .expr-menu.open { opacity:1; pointer-events:auto; }
-  .expr-btn {
-    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.05); color:#dedede; border-radius:8px;
-    padding:7px 12px; font:12px -apple-system, system-ui, sans-serif; font-weight:500; cursor:pointer; text-align:center; transition:0.2s;
-  }
-  .expr-btn:active, .expr-btn:hover { background:#32d74b; color:#000; border-color:#32d74b; }
+html,body{
+  width:100%;
+  height:100%;
+  background:#000;
+  color:#fff;
+  font-family:"Quicksand",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  overflow:hidden;
+  overscroll-behavior:none;
+  touch-action:manipulation;
+}
+body{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:space-between;
+  user-select:none;
+  -webkit-user-select:none;
+}
+body.mirror-mode .hero-stage,
+body.mirror-mode .dashboard-grid,
+body.mirror-mode .hud-clock,
+body.mirror-mode .hud-compass{
+  transform:scaleX(-1);
+}
+body.mirror-mode #mirror-toggle-btn{
+  background:#fff;
+  color:#000;
+  border-color:#fff;
+}
 
-  /* Fluid transitions for rendering */
-  #eyesGroup { transition: fill 0.4s cubic-bezier(0.2,0.8,0.2,1); }
-  #pathMouth { transition: stroke 0.4s cubic-bezier(0.2,0.8,0.2,1), opacity 0.4s cubic-bezier(0.2,0.8,0.2,1); }
-  .hud-item { opacity:0; transition:opacity 0.4s cubic-bezier(0.2,0.8,0.2,1); }
-  .hud-item.active { opacity:1; animation:hud-float 3s ease-in-out infinite; }
-  @keyframes hud-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+.app{
+  width:100%;
+  height:100%;
+  height:100dvh;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  padding:calc(8px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));
+  position:relative;
+  overflow:hidden;
+}
+
+/* Header / Top Bar */
+.top-bar{
+  width:100%;
+  height:38px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  flex-shrink:0;
+  z-index:10;
+}
+.header-left, .header-right{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-shrink:0;
+}
+.header-right{
+  margin-right:8px;
+}
+.header-center{
+  flex:1;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-width:0;
+}
+.hud-clock{
+  font-size:14px;
+  font-weight:600;
+  letter-spacing:0.02em;
+  color:#aaa;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.hud-compass{
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:0.06em;
+  color:#fff;
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  background:#121214;
+  border:1px solid #222226;
+  padding:4px 8px;
+  border-radius:6px;
+  white-space:nowrap;
+}
+.hud-compass-deg{
+  color:#777;
+  font-weight:500;
+  font-size:11px;
+}
+
+/* Control Buttons & Indicator */
+.icon-btn{
+  width:34px;
+  height:34px;
+  border-radius:6px;
+  background:#141416;
+  border:1px solid #28282e;
+  color:#fff;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  white-space:nowrap;
+  padding:0;
+  flex-shrink:0;
+  transition:opacity .6s ease,background-color .15s,border-color .15s;
+}
+.icon-btn.faded{
+  opacity:0;
+  pointer-events:none;
+}
+.icon-btn:hover{background:#202024;border-color:#3a3a40}
+.icon-btn:active{transform:scale(.95)}
+.icon-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.icon-btn.trip-active{
+  color:#22c55e;
+  border-color:rgba(34,197,94,.4);
+  background:#111c14;
+}
+.icon-btn.trip-active:hover{
+  border-color:rgba(34,197,94,.7);
+  background:#16241a;
+}
+
+.indicator{
+  position:absolute;
+  top:calc(6px + env(safe-area-inset-top));
+  right:calc(6px + env(safe-area-inset-right));
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:#444;
+  box-shadow:0 0 3px rgba(255,255,255,.15);
+  transition:background-color .3s ease,box-shadow .3s ease;
+  cursor:pointer;
+  z-index:30;
+}
+.indicator::after{
+  content:"";
+  position:absolute;
+  top:-8px;
+  left:-8px;
+  right:-8px;
+  bottom:-8px;
+}
+.indicator.red{background:#ef4444;box-shadow:0 0 5px rgba(239,68,68,.9),0 0 10px rgba(239,68,68,.4)}
+.indicator.orange{background:#f97316;box-shadow:0 0 5px rgba(249,115,22,.9),0 0 10px rgba(249,115,22,.4);animation:pulse 1.6s infinite ease-in-out}
+.indicator.yellow{background:#eab308;box-shadow:0 0 5px rgba(234,179,8,.9),0 0 10px rgba(234,179,8,.4)}
+.indicator.green{background:#22c55e;box-shadow:0 0 5px rgba(34,197,94,.9),0 0 10px rgba(34,197,94,.5)}
+
+@keyframes pulse{
+  0%,100%{opacity:1;transform:scale(1)}
+  50%{opacity:.35;transform:scale(.85)}
+}
+
+/* App Main Body Layout */
+.app-body{
+  flex:1;
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  min-height:0;
+}
+
+/* Speed Display (Hero) */
+.hero-stage{
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:4px 0;
+  flex-shrink:1;
+}
+.speed{
+  font-size:clamp(62px, 21vw, 150px);
+  font-weight:700;
+  line-height:.86;
+  letter-spacing:-.05em;
+  font-variant-numeric:tabular-nums;
+  color:#fff;
+  text-align:center;
+}
+.unit{
+  font-size:clamp(16px, 4.5vw, 26px);
+  font-weight:600;
+  letter-spacing:.12em;
+  margin-top:6px;
+  color:#777;
+  text-align:center;
+}
+.road-location{
+  margin-top:6px;
+  font-size:clamp(12px, 3.2vw, 15px);
+  color:#888;
+  font-weight:500;
+  text-align:center;
+  width:96%;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  letter-spacing:0.01em;
+}
+
+/* Dashboard Metrics Grid (2-column layout natively for smartphones) */
+.dashboard-grid{
+  width:100%;
+  max-width:540px;
+  margin:0 auto;
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:6px;
+  padding-top:8px;
+  flex-shrink:0;
+}
+.hud-tile{
+  background:#0c0c0e;
+  border:1px solid #1c1c20;
+  border-radius:6px;
+  padding:6px 8px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  min-height:50px;
+  transition:border-color .15s;
+}
+.hud-tile:active{border-color:#333}
+.tile-label{
+  font-size:9.5px;
+  font-weight:600;
+  letter-spacing:.08em;
+  color:#666;
+  text-transform:uppercase;
+  margin-bottom:2px;
+  white-space:nowrap;
+}
+.tile-val{
+  font-size:clamp(16px, 4vw, 20px);
+  font-weight:700;
+  color:#fff;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+  line-height:1.1;
+}
+.tile-sub{
+  font-size:10px;
+  font-weight:500;
+  color:#555;
+  margin-left:2px;
+}
+
+/* Expanded feature tile UI for odd counts (fills empty space with wide telemetry badge) */
+.hud-tile.tile-expanded{
+  grid-column:span 2;
+  flex-direction:row;
+  justify-content:space-between;
+  align-items:center;
+  padding:8px 16px;
+  background:linear-gradient(90deg, #121217 0%, #0c0c0e 100%);
+  border:1px solid #24242c;
+}
+.hud-tile.tile-expanded .tile-label{
+  margin-bottom:0;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.09em;
+  color:#777;
+}
+.hud-tile.tile-expanded .tile-val{
+  font-size:clamp(16px, 4vw, 20px);
+  line-height:1;
+}
+
+/* Landscape Mode for Car Mounts (Side-by-Side on short screens) */
+@media (orientation: landscape) and (max-height: 480px){
+  .app{
+    padding:calc(4px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
+  }
+  .top-bar{
+    height:30px;
+  }
+  .icon-btn{
+    width:30px;
+    height:30px;
+  }
+  .app-body{
+    flex-direction:row;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .hero-stage{
+    flex:1;
+    padding:0;
+    max-width:50%;
+  }
+  .speed{
+    font-size:clamp(54px, 19vh, 96px);
+  }
+  .unit{
+    font-size:13px;
+    margin-top:2px;
+  }
+  .road-location{
+    font-size:11px;
+    margin-top:4px;
+  }
+  .dashboard-grid{
+    flex:1;
+    max-width:50%;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:5px;
+    padding-top:0;
+    max-height:calc(100vh - 44px);
+    overflow-y:auto;
+  }
+  .hud-tile{
+    min-height:44px;
+    padding:4px 6px;
+  }
+  .hud-tile.tile-expanded{
+    padding:4px 12px;
+    min-height:36px;
+  }
+  .tile-val{
+    font-size:15px;
+  }
+}
+
+/* Manual Rotation Override for Devices with Orientation Lock */
+body.manual-rotated{
+  overflow:hidden;
+}
+body.manual-rotated .app{
+  width:100dvh;
+  height:100dvw;
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%, -50%) rotate(90deg);
+  transform-origin:center center;
+  padding:calc(4px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
+}
+body.manual-rotated #rotate-toggle-btn{
+  background:#fff;
+  color:#000;
+  border-color:#fff;
+}
+body.manual-rotated .top-bar{
+  height:30px;
+}
+body.manual-rotated .icon-btn{
+  width:30px;
+  height:30px;
+}
+body.manual-rotated .app-body{
+  flex-direction:row;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+body.manual-rotated .hero-stage{
+  flex:1;
+  padding:0;
+  max-width:50%;
+}
+body.manual-rotated .speed{
+  font-size:clamp(54px, 19vh, 96px);
+}
+body.manual-rotated .unit{
+  font-size:13px;
+  margin-top:2px;
+}
+body.manual-rotated .road-location{
+  font-size:11px;
+  margin-top:4px;
+}
+body.manual-rotated .dashboard-grid{
+  flex:1;
+  max-width:50%;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:5px;
+  padding-top:0;
+  max-height:calc(100vh - 44px);
+  overflow-y:auto;
+}
+body.manual-rotated .hud-tile{
+  min-height:44px;
+  padding:4px 6px;
+}
+body.manual-rotated .hud-tile.tile-expanded{
+  padding:4px 12px;
+  min-height:36px;
+}
+body.manual-rotated .tile-val{
+  font-size:15px;
+}
+body.manual-rotated .modal{
+  max-height:84vw;
+  max-width:min(380px, 86vh);
+  transform:rotate(90deg);
+}
+
+/* Modal / Settings Sheet */
+.modal-backdrop{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.82);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px;
+  z-index:100;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .2s ease;
+}
+.modal-backdrop.open{
+  opacity:1;
+  pointer-events:auto;
+}
+.modal{
+  background:#121215;
+  border:1px solid #28282e;
+  border-radius:8px;
+  width:100%;
+  max-width:380px;
+  max-height:86vh;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  box-shadow:0 16px 36px rgba(0,0,0,.9);
+}
+.modal-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 16px;
+  border-bottom:1px solid #222228;
+  flex-shrink:0;
+}
+.modal-title{
+  font-size:16px;
+  font-weight:700;
+  color:#fff;
+  letter-spacing:0.01em;
+}
+.modal-content{
+  padding:14px 16px;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+.settings-section-title{
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.12em;
+  color:#777;
+  text-transform:uppercase;
+  margin-bottom:8px;
+}
+.settings-checklist{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.check-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:#18181c;
+  border:1px solid #26262c;
+  border-radius:6px;
+  padding:8px 12px;
+  min-height:42px;
+  cursor:pointer;
+  transition:background-color .15s;
+}
+.check-item:active{background:#222228}
+.check-item label{
+  cursor:pointer;
+  font-size:13.5px;
+  font-weight:600;
+  color:#eee;
+  flex:1;
+}
+.check-item input[type="checkbox"]{
+  appearance:none;
+  -webkit-appearance:none;
+  width:20px;
+  height:20px;
+  border-radius:6px;
+  border:1.5px solid #4a4a54;
+  background:#121214;
+  outline:none;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  flex-shrink:0;
+  margin-left:10px;
+}
+.check-item input[type="checkbox"]:checked{
+  background:#fff;
+  border-color:#fff;
+}
+.check-item input[type="checkbox"]:checked::after{
+  content:"";
+  width:5px;
+  height:9px;
+  border:solid #000;
+  border-width:0 2px 2px 0;
+  transform:rotate(45deg);
+  margin-bottom:2px;
+}
+
+/* Button rule: rectangles with slightly curved corners 6-8px, centered, no wrap */
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:6px;
+  font-size:13.5px;
+  font-weight:700;
+  white-space:nowrap;
+  cursor:pointer;
+  border:1px solid transparent;
+  padding:0 16px;
+  height:38px;
+  transition:background-color .15s,border-color .15s,transform .1s;
+}
+.btn:active{transform:scale(.97)}
+.btn-primary{
+  background:#fff;
+  color:#000;
+}
+.btn-primary:hover{background:#e8e8e8}
+.btn-secondary{
+  background:#1c1c20;
+  border-color:#2c2c34;
+  color:#ddd;
+}
+.btn-secondary:hover{background:#27272e;border-color:#3c3c44}
+
+.btn-group{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  width:100%;
+}
+.btn-group .btn{
+  width:100%;
+  height:38px;
+}
+
+.modal-footer{
+  padding:12px 16px;
+  border-top:1px solid #222228;
+  display:flex;
+  justify-content:flex-end;
+  flex-shrink:0;
+}
+
+/* Confirm Reset Modal */
+.confirm-modal-box{
+  max-width:340px;
+}
+.confirm-modal-body{
+  padding:16px;
+  font-size:13.5px;
+  color:#bbb;
+  line-height:1.5;
+}
+.confirm-modal-footer{
+  padding:12px 16px;
+  border-top:1px solid #222228;
+}
+
+/* Drive Records History */
+.drive-records-list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-top:10px;
+  max-height:220px;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+.record-card{
+  background:#18181c;
+  border:1px solid #26262c;
+  border-radius:6px;
+  padding:10px 12px;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.record-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.record-name{
+  font-size:13px;
+  font-weight:700;
+  color:#fff;
+  letter-spacing:0.02em;
+}
+.record-stats{
+  font-size:12px;
+  color:#aaa;
+  line-height:1.4;
+}
+.record-location{
+  font-size:11px;
+  color:#777;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.record-btn-group{
+  display:grid;
+  grid-template-columns:1fr 70px;
+  gap:8px;
+  margin-top:6px;
+  width:100%;
+}
+.record-btn-group .btn{
+  height:32px;
+  font-size:12px;
+  padding:0 8px;
+  border-radius:6px;
+}
+.record-empty{
+  font-size:12px;
+  color:#666;
+  text-align:center;
+  padding:12px 0;
+}
+
+.hidden{display:none !important}
 </style>
 </head>
 <body>
-  <div class="hidden-trigger" id="hiddenTrigger"></div>
-  <div class="expr-menu" id="exprMenu"></div>
+<main class="app">
+  <!-- Corner GPS Status Indicator -->
+  <div id="status-indicator" class="indicator orange" role="button" tabindex="0" title="GPS Status"></div>
 
-  <div class="dot" id="liveDot" title="tap to pause/resume"></div>
-  <div class="drive-btn" id="driveBtn" title="tap to enable drive mode (motion sensors)">
-    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M5 17h14M5 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm14 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM3 17l1.5-5.5A2 2 0 0 1 6.4 10h11.2a2 2 0 0 1 1.9 1.5L21 17M6 10l1.5-3.5A2 2 0 0 1 9.3 5h5.4a2 2 0 0 1 1.8 1.5L18 10"/>
-    </svg>
-  </div>
-  <div class="sim-toggle" id="simToggle" title="simulate"></div>
-  <div class="sim-panel" id="simPanel">
-    <div class="sim-row">
-      <div class="sim-btn" data-sim="turnL">Turn L</div>
-      <div class="sim-btn" data-sim="turnR">Turn R</div>
-      <div class="sim-btn" data-sim="brake">Brake</div>
-      <div class="sim-btn" data-sim="accel">Accel</div>
-      <div class="sim-btn" data-sim="spin">Spin Out</div>
+  <!-- Top Bar -->
+  <header class="top-bar">
+    <div class="header-left">
+      <div id="hud-clock" class="hud-clock">--:--</div>
+      <button id="trip-start-btn" class="icon-btn" title="Start Trip" aria-label="Start Trip">
+        <svg viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+      </button>
+      <button id="trip-reset-btn" class="icon-btn" title="Reset Trip" aria-label="Reset Trip">
+        <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      </button>
     </div>
-    <div class="sim-row">
-      <div class="sim-btn" data-sim="hillUp">Hill Up</div>
-      <div class="sim-btn" data-sim="hillDown">Hill Down</div>
-      <div class="sim-btn" data-sim="tiltL">Tilt L</div>
-      <div class="sim-btn" data-sim="tiltR">Tilt R</div>
+    
+    <div class="header-center">
+      <div id="hud-compass" class="hud-compass">
+        <span id="compass-cardinal">--</span>
+        <span id="compass-deg" class="hud-compass-deg">--°</span>
+      </div>
     </div>
-    <div class="sim-slider-row">
-      <input type="range" id="simSpeed" min="0" max="120" value="0">
-      <span id="simSpeedVal">0 km/h</span>
+    
+    <div class="header-right">
+      <button id="rotate-toggle-btn" class="icon-btn" title="Rotate Screen (Landscape)" aria-label="Rotate Screen">
+        <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.9 1 6.7 2.7L21 8"/><path d="M21 3v5h-5"/></svg>
+      </button>
+      <button id="mirror-toggle-btn" class="icon-btn" title="HUD Mirror Mode" aria-label="Toggle Mirror Mode">
+        <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3m8-18h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3m-4-19v20"/></svg>
+      </button>
+      <button id="settings-open-btn" class="icon-btn" title="Settings" aria-label="Open Settings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
     </div>
-    <div style="margin-top:8px; text-align:center; color:#555;">W/S speed · A/D turn (hold)</div>
+  </header>
+
+  <!-- Responsive App Body -->
+  <div class="app-body">
+    <!-- Speedometer Center Stage -->
+    <section class="hero-stage">
+      <div id="speed" class="speed">0</div>
+      <div id="unit-display" class="unit">KM/H</div>
+      <div id="road-location" class="road-location">--</div>
+    </section>
+
+    <!-- Dynamic Smartphone HUD Metrics Grid -->
+    <section id="dashboard-grid" class="dashboard-grid">
+      <div id="tile-max-speed" class="hud-tile">
+        <span class="tile-label">Max Speed</span>
+        <span class="tile-val"><span id="val-max-speed">0</span><span class="tile-sub unit-text">km/h</span></span>
+      </div>
+      
+      <div id="tile-avg-speed" class="hud-tile">
+        <span class="tile-label">Avg Speed</span>
+        <span class="tile-val"><span id="val-avg-speed">0</span><span class="tile-sub unit-text">km/h</span></span>
+      </div>
+      
+      <div id="tile-trip-dist" class="hud-tile">
+        <span class="tile-label">Trip Dist</span>
+        <span class="tile-val"><span id="val-trip-dist">0.0</span><span class="tile-sub dist-unit-text">km</span></span>
+      </div>
+      
+      <div id="tile-trip-time" class="hud-tile">
+        <span class="tile-label">Trip Time</span>
+        <span id="val-trip-time" class="tile-val">00:00</span>
+      </div>
+      
+      <div id="tile-altitude" class="hud-tile">
+        <span class="tile-label">Altitude</span>
+        <span class="tile-val"><span id="val-altitude">--</span><span class="tile-sub alt-unit-text">m</span></span>
+      </div>
+      
+      <div id="tile-accel" class="hud-tile">
+        <span class="tile-label" id="accel-label">0-100 km/h</span>
+        <span id="val-accel" class="tile-val">Ready</span>
+      </div>
+      
+      <div id="tile-gforce" class="hud-tile">
+        <span class="tile-label">G-Force</span>
+        <span class="tile-val"><span id="val-gforce">0.00</span><span class="tile-sub">G</span></span>
+      </div>
+    </section>
   </div>
-  <div class="stage">
-    <svg id="svg" viewBox="0 0 291 159" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="3.5" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-      <g id="eyesGroup" fill="#ffffff">
-        <path id="pathLeft" />
-        <path id="pathRight" />
-        <path id="pathMouth" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="0" />
-        
-        <!-- Premium HUD Holograms -->
-        <g id="hud-glee" class="hud-item" filter="url(#softGlow)">
-          <path d="M 235 25 Q 235 35 245 35 Q 235 35 235 45 Q 235 35 225 35 Q 235 35 235 25 Z" fill="#32d74b"/>
-          <path d="M 215 15 Q 215 20 220 20 Q 215 20 215 25 Q 215 20 210 20 Q 215 20 215 15 Z" fill="#32d74b"/>
-        </g>
-        <g id="hud-surprised" class="hud-item" filter="url(#softGlow)">
-          <path d="M235 15 L235 40 M235 52 L235 55" stroke="#ff9f0a" stroke-width="7" stroke-linecap="round"/>
-        </g>
-        <g id="hud-scared" class="hud-item" filter="url(#softGlow)">
-          <path d="M70 15 C 80 30, 85 45, 70 45 C 55 45, 60 30, 70 15 Z" fill="#0a84ff" opacity="0.9"/>
-        </g>
-        <g id="hud-furious" class="hud-item" filter="url(#softGlow)">
-          <path d="M225 25 L240 25 M232.5 17 L232.5 32 M245 40 L255 40 M250 35 L250 45" stroke="#ff453a" stroke-width="4" fill="none" stroke-linecap="round"/>
-        </g>
-        <g id="hud-skeptic" class="hud-item" filter="url(#softGlow)">
-          <path d="M235 40 Q235 20 250 20 Q265 20 265 33 Q265 45 250 50 M250 62 L250 65" stroke="#bf5af2" stroke-width="6" fill="none" stroke-linecap="round"/>
-        </g>
-        <g id="hud-sleepy" class="hud-item" filter="url(#softGlow)">
-          <text x="215" y="35" fill="#0a84ff" font-family="system-ui, sans-serif" font-weight="700" font-size="22">Z</text>
-          <text x="238" y="18" fill="#0a84ff" font-family="system-ui, sans-serif" font-weight="700" font-size="14">z</text>
-        </g>
-        <g id="hud-love" class="hud-item" filter="url(#softGlow)">
-          <path d="M 244 15 A 7 7 0 0 1 258 15 A 7 7 0 0 1 272 15 Q 272 29 258 43 Q 244 29 244 15 Z" fill="#ff2d55"/>
-          <path d="M 20 15 A 7 7 0 0 1 34 15 A 7 7 0 0 1 48 15 Q 48 29 34 43 Q 20 29 20 15 Z" fill="#ff2d55"/>
-        </g>
-        <g id="hud-processing" class="hud-item" filter="url(#softGlow)">
-          <rect x="220" y="20" width="8" height="8" rx="4" fill="#0a84ff" />
-          <rect x="235" y="20" width="8" height="8" rx="4" fill="#0a84ff" />
-          <rect x="250" y="20" width="8" height="8" rx="4" fill="#0a84ff" />
-        </g>
-        <g id="hud-dizzy" class="hud-item" filter="url(#softGlow)">
-          <polygon points="250,10 253,18 262,18 255,23 257,31 250,26 243,31 245,23 238,18 247,18" fill="#ff9f0a"/>
-          <polygon points="40,20 42,26 50,26 44,30 46,36 40,32 34,36 36,30 30,26 38,26" fill="#bf5af2"/>
-        </g>
-      </g>
-    </svg>
+</main>
+
+<!-- Confirm Reset Modal -->
+<div id="confirm-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-heading">
+  <div class="modal confirm-modal-box">
+    <div class="modal-header">
+      <h2 id="confirm-modal-heading" class="modal-title">Reset Trip Records</h2>
+    </div>
+    <div class="confirm-modal-body">
+      Are you sure you want to reset current trip records? This will clear speed, distance, and duration.
+    </div>
+    <div class="confirm-modal-footer">
+      <div class="btn-group">
+        <button id="confirm-modal-cancel" class="btn btn-secondary">Cancel</button>
+        <button id="confirm-modal-ok" class="btn btn-primary">Reset</button>
+      </div>
+    </div>
   </div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settings-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-heading">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-heading" class="modal-title">HUD Settings</h2>
+      <button id="settings-close-btn" class="icon-btn" aria-label="Close Settings">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    
+    <div class="modal-content">
+      <!-- Speed Units -->
+      <section>
+        <div class="settings-section-title">Speed Unit</div>
+        <div class="btn-group">
+          <button id="btn-unit-kmh" class="btn btn-primary">KM/H</button>
+          <button id="btn-unit-mph" class="btn btn-secondary">MPH</button>
+        </div>
+      </section>
+
+      <!-- Checklist of Display Features -->
+      <section>
+        <div class="settings-section-title">Visible Features</div>
+        <div class="settings-checklist">
+          <div class="check-item">
+            <label for="check-clock">Clock / Time</label>
+            <input type="checkbox" id="check-clock" checked>
+          </div>
+          <div class="check-item">
+            <label for="check-compass">Compass Heading</label>
+            <input type="checkbox" id="check-compass" checked>
+          </div>
+          <div class="check-item">
+            <label for="check-location">Road & City (Free Geocoding)</label>
+            <input type="checkbox" id="check-location" checked>
+          </div>
+          <div class="check-item">
+            <label for="check-max-speed">Max Speed</label>
+            <input type="checkbox" id="check-max-speed" checked>
+          </div>
+          <div class="check-item">
+            <label for="check-avg-speed">Average Speed</label>
+            <input type="checkbox" id="check-avg-speed" checked>
+          </div>
+          <div class="check-item">
+            <label for="check-trip-dist">Trip Distance</label>
+            <input type="checkbox" id="check-trip-dist" checked>
+          </div>
+          <div class="check-item">
+            <label for="check-trip-time">Trip Duration</label>
+            <input type="checkbox" id="check-trip-time" checked>
+          </div>
+          <div class="check-item">
+            <label for="check-altitude">Altitude / Elevation</label>
+            <input type="checkbox" id="check-altitude" checked>
+          </div>
+          <div class="check-item">
+            <label for="check-accel">Acceleration Timer (0-100 / 0-60)</label>
+            <input type="checkbox" id="check-accel">
+          </div>
+          <div class="check-item">
+            <label for="check-gforce">G-Force Sensor</label>
+            <input type="checkbox" id="check-gforce">
+          </div>
+        </div>
+      </section>
+
+      <!-- Display Options -->
+      <section>
+        <div class="settings-section-title">Display & Controls</div>
+        <div class="settings-checklist">
+          <div class="check-item">
+            <label for="check-rotate">Rotate Screen (Landscape)</label>
+            <input type="checkbox" id="check-rotate">
+          </div>
+          <div class="check-item">
+            <label for="check-mirror">HUD Mirror Mode (Windshield)</label>
+            <input type="checkbox" id="check-mirror">
+          </div>
+          <div class="check-item">
+            <label for="check-wakelock">Keep Screen Awake (Wake Lock)</label>
+            <input type="checkbox" id="check-wakelock" checked>
+          </div>
+        </div>
+      </section>
+
+      <!-- Trip Management & Drive Records -->
+      <section>
+        <div class="settings-section-title">Drive Records & Trip</div>
+        <div class="btn-group">
+          <button id="btn-save-drive" class="btn btn-primary">Save Current Drive</button>
+          <button id="btn-reset-trip" class="btn btn-secondary">Reset Trip</button>
+        </div>
+        <div class="btn-group" style="margin-top:8px;">
+          <button id="btn-export-drives" class="btn btn-secondary">Export All (JSON)</button>
+          <button id="btn-clear-drives" class="btn btn-secondary">Clear History</button>
+        </div>
+        <div id="drive-records-list" class="drive-records-list"></div>
+      </section>
+    </div>
+
+    <div class="modal-footer">
+      <button id="modal-done-btn" class="btn btn-primary" style="width:100%">Done</button>
+    </div>
+  </div>
+</div>
 
 <script>
-  // EXACT ORIGINAL POINTS (Retained per request)
-  const SHAPES = {
-    "Neutral": {"left": [[74.0, 45.0], [63.6, 55.4], [63.0, 73.4], [63.0, 91.7], [64.5, 109.0], [74.5, 119.0], [92.8, 119.0], [111.0, 119.0], [129.2, 118.8], [139.0, 108.8], [139.0, 90.5], [139.5, 72.5], [138.7, 56.0], [128.7, 45.0], [110.5, 45.0], [92.2, 45.0]], "right": [[163.0, 37.0], [153.9, 49.0], [152.0, 66.7], [152.0, 86.2], [152.0, 105.8], [163.0, 115.3], [178.4, 120.0], [198.0, 120.0], [217.6, 120.0], [226.7, 108.0], [229.0, 90.8], [229.0, 71.2], [229.0, 51.6], [219.0, 40.3], [202.1, 37.0], [182.6, 37.0]]},
-    "Blink": {"left": [[136.0, 62.0], [137.5, 62.3], [138.7, 63.3], [139.4, 64.7], [139.4, 66.3], [138.7, 67.7], [137.5, 68.7], [136.0, 69.0], [66.5, 69.0], [65.0, 68.7], [63.8, 67.7], [63.1, 66.3], [63.1, 64.7], [63.8, 63.3], [65.0, 62.3], [66.5, 62.0]], "right": [[225.5, 62.0], [227.0, 62.3], [228.2, 63.3], [228.9, 64.7], [228.9, 66.3], [228.2, 67.7], [227.0, 68.7], [225.5, 69.0], [155.5, 69.0], [154.0, 68.7], [152.8, 67.7], [152.1, 66.3], [152.1, 64.7], [152.8, 63.3], [154.0, 62.3], [155.5, 62.0]]},
-    "Happy": {"left": [[69.0, 70.0], [62.8, 76.0], [58.0, 84.1], [62.9, 91.0], [74.8, 91.0], [86.6, 91.0], [98.4, 91.0], [110.2, 91.0], [122.0, 91.0], [133.8, 91.0], [131.8, 81.0], [124.2, 75.2], [116.2, 70.0], [104.4, 70.0], [92.6, 70.0], [80.8, 70.0]], "right": [[169.0, 70.0], [161.8, 76.0], [156.0, 83.5], [161.1, 91.0], [173.2, 91.0], [185.2, 91.0], [197.3, 91.0], [209.4, 91.0], [221.4, 91.0], [233.0, 90.5], [231.5, 81.5], [224.5, 76.0], [217.2, 70.0], [205.2, 70.0], [193.1, 70.0], [181.1, 70.0]]},
-    "Glee": {"left": [[74.0, 54.0], [68.0, 60.7], [63.0, 67.6], [68.0, 70.7], [78.5, 69.0], [90.0, 69.0], [101.6, 69.0], [113.2, 69.0], [124.7, 69.0], [133.4, 73.0], [133.8, 63.0], [127.0, 58.0], [120.2, 54.0], [108.7, 54.0], [97.1, 54.0], [85.6, 54.0]], "right": [[170.0, 54.0], [165.0, 61.6], [159.0, 67.4], [164.0, 70.2], [174.8, 69.0], [186.3, 69.0], [197.7, 69.0], [209.2, 69.0], [220.6, 69.0], [229.2, 73.0], [230.8, 63.0], [223.8, 58.0], [215.7, 54.0], [204.3, 54.0], [192.9, 54.0], [181.4, 54.0]]},
-    "Awe": {"left": [[80.0, 28.0], [66.0, 36.8], [56.4, 50.0], [56.0, 70.0], [56.0, 90.4], [61.0, 107.0], [74.8, 116.0], [92.4, 120.0], [112.9, 120.0], [127.0, 111.9], [136.0, 98.7], [136.0, 78.3], [136.0, 57.9], [131.0, 41.2], [119.0, 30.5], [100.4, 28.0]], "right": [[173.0, 28.0], [160.0, 38.6], [155.0, 56.0], [155.0, 76.7], [155.0, 97.4], [163.8, 110.8], [177.2, 120.0], [197.9, 120.0], [215.7, 116.0], [229.1, 106.9], [235.0, 92.1], [236.0, 71.8], [235.2, 52.0], [226.8, 37.8], [212.0, 30.3], [193.7, 28.0]]},
-    "surprised": {"left": [[66.0, 22.0], [53.2, 34.8], [45.0, 51.8], [45.0, 75.2], [47.1, 97.0], [58.0, 111.8], [72.0, 121.0], [94.5, 121.0], [117.3, 120.3], [129.7, 108.0], [139.0, 93.8], [139.0, 70.4], [139.0, 47.1], [127.3, 33.3], [112.7, 22.0], [89.4, 22.0]], "right": [[167.0, 22.0], [154.5, 34.5], [147.0, 51.7], [147.0, 74.9], [148.1, 97.0], [160.0, 110.0], [173.8, 121.0], [197.0, 121.0], [219.8, 120.2], [233.5, 108.5], [241.0, 91.3], [241.0, 68.1], [240.9, 45.0], [229.0, 31.4], [213.4, 22.0], [190.2, 22.0]]},
-    "Scared": {"left": [[89.0, 28.0], [79.0, 36.9], [74.0, 49.0], [74.0, 64.9], [74.0, 80.9], [79.6, 93.0], [95.5, 93.0], [111.5, 93.0], [127.4, 93.0], [140.4, 88.6], [141.0, 72.9], [141.0, 57.0], [141.0, 41.1], [134.8, 28.8], [119.2, 28.0], [103.3, 28.0]], "right": [[160.0, 28.0], [153.0, 39.8], [153.0, 55.7], [153.0, 71.6], [153.0, 87.4], [165.1, 93.0], [181.0, 93.0], [196.8, 93.0], [212.7, 93.0], [220.0, 82.7], [220.0, 66.8], [220.0, 50.9], [216.4, 38.0], [207.0, 29.2], [191.8, 28.0], [175.9, 28.0]]},
-    "worry": {"left": [[107.0, 40.0], [93.8, 45.0], [78.9, 49.0], [67.0, 55.9], [67.0, 73.5], [67.0, 91.2], [72.7, 104.7], [85.3, 110.0], [103.0, 110.0], [120.7, 110.0], [133.6, 105.0], [141.0, 94.4], [142.0, 77.1], [142.0, 59.5], [137.6, 45.0], [124.7, 40.0]], "right": [[161.0, 39.0], [154.0, 51.6], [154.0, 69.4], [154.0, 87.2], [160.0, 100.2], [169.6, 109.4], [186.8, 110.0], [204.7, 110.0], [219.0, 106.8], [228.7, 97.3], [229.0, 79.6], [229.0, 61.8], [222.0, 49.8], [207.2, 45.0], [189.5, 44.5], [178.4, 40.0]]},
-    "sad__look_at_user_": {"left": [[96.0, 15.0], [86.3, 22.0], [71.5, 22.0], [62.2, 28.2], [60.0, 41.3], [60.2, 56.0], [68.8, 64.0], [83.7, 64.0], [98.2, 65.0], [113.1, 65.0], [122.2, 58.8], [130.4, 51.0], [133.0, 38.2], [133.0, 23.3], [125.8, 15.0], [110.9, 15.0]], "right": [[154.0, 15.0], [153.0, 29.5], [153.0, 44.5], [158.0, 55.6], [165.3, 65.0], [180.3, 65.0], [195.2, 65.0], [210.2, 65.0], [218.5, 57.5], [226.0, 49.4], [226.0, 34.5], [218.0, 26.3], [207.4, 22.0], [192.4, 22.0], [183.9, 15.0], [169.0, 15.0]]},
-    "Sad__look_down_": {"left": [[125.0, 109.0], [117.2, 115.0], [104.4, 115.0], [92.0, 115.5], [83.1, 120.0], [71.5, 123.0], [59.1, 123.9], [62.3, 134.0], [68.0, 142.9], [80.8, 143.0], [93.6, 143.0], [106.5, 143.0], [119.3, 143.0], [126.2, 135.8], [132.0, 128.3], [132.0, 115.4]], "right": [[167.0, 109.0], [157.0, 112.4], [157.0, 125.2], [160.0, 135.0], [167.7, 143.0], [180.5, 143.0], [193.3, 143.0], [206.0, 143.0], [218.8, 143.0], [225.3, 134.7], [230.0, 126.2], [220.5, 123.0], [210.5, 119.0], [197.8, 118.8], [187.7, 115.0], [175.0, 115.0]]},
-    "Furious": {"left": [[74.0, 54.0], [73.0, 67.7], [73.0, 81.8], [73.0, 95.9], [80.7, 104.0], [94.8, 104.0], [108.9, 104.0], [122.6, 103.0], [136.5, 102.5], [141.0, 91.5], [141.0, 77.4], [134.7, 69.0], [123.5, 65.0], [109.6, 64.6], [99.4, 58.0], [87.0, 55.7]], "right": [[209.0, 55.0], [197.8, 59.2], [186.2, 64.0], [172.1, 64.0], [161.8, 69.0], [155.0, 76.9], [155.0, 91.0], [160.5, 100.5], [172.1, 104.0], [186.2, 104.0], [200.3, 104.0], [214.4, 104.0], [222.0, 97.1], [223.0, 83.4], [223.0, 69.3], [223.0, 55.1]]},
-    "angery": {"left": [[72.0, 77.0], [72.0, 89.2], [72.0, 101.5], [78.3, 107.3], [85.3, 113.0], [97.5, 113.0], [109.8, 113.0], [122.0, 113.0], [131.0, 109.2], [137.0, 101.8], [137.0, 89.5], [127.7, 86.0], [118.2, 82.2], [106.1, 82.0], [93.9, 81.9], [83.8, 78.0]], "right": [[211.0, 77.0], [200.2, 79.0], [190.4, 82.0], [178.2, 82.0], [168.2, 85.8], [156.1, 86.0], [152.0, 94.7], [152.9, 106.0], [159.0, 112.5], [170.7, 113.0], [182.9, 113.0], [195.1, 113.0], [207.3, 113.0], [214.2, 106.0], [216.0, 95.6], [216.0, 83.4]]},
-    "annoyed": {"left": [[73.0, 64.0], [73.0, 74.9], [81.0, 78.3], [90.7, 80.0], [101.6, 80.0], [112.4, 80.0], [123.3, 80.0], [134.1, 80.0], [141.2, 75.0], [145.0, 68.0], [138.1, 64.0], [127.3, 64.0], [116.4, 64.0], [105.6, 64.0], [94.7, 64.0], [83.9, 64.0]], "right": [[163.0, 62.0], [162.9, 71.9], [172.5, 73.0], [183.1, 73.0], [193.8, 73.0], [204.4, 73.0], [215.1, 73.0], [225.8, 73.0], [236.0, 72.6], [237.0, 63.2], [226.9, 62.0], [216.3, 62.0], [205.6, 62.0], [195.0, 62.0], [184.3, 62.0], [173.7, 62.0]]},
-    "Frustrated_or_Bored": {"left": [[59.0, 101.0], [58.0, 112.0], [65.6, 116.6], [72.7, 121.0], [84.1, 121.0], [95.2, 122.0], [106.7, 122.0], [117.7, 121.0], [123.9, 116.0], [131.0, 109.8], [127.8, 101.0], [116.3, 101.0], [104.9, 101.0], [93.4, 101.0], [81.9, 101.0], [70.5, 101.0]], "right": [[158.0, 101.0], [157.0, 111.7], [164.4, 117.4], [171.5, 121.0], [182.6, 121.0], [193.8, 121.0], [204.9, 121.0], [216.0, 121.0], [222.8, 116.0], [228.0, 109.5], [224.8, 101.0], [213.7, 101.0], [202.5, 101.0], [191.4, 101.0], [180.3, 101.0], [169.1, 101.0]]},
-    "Unimpressed": {"left": [[60.0, 96.0], [59.0, 106.1], [66.0, 112.2], [73.5, 116.0], [84.8, 116.0], [96.1, 116.0], [107.5, 116.0], [118.8, 116.0], [125.3, 110.0], [131.0, 104.0], [128.0, 96.0], [116.6, 96.0], [105.3, 96.0], [94.0, 96.0], [82.7, 96.0], [71.3, 96.0]], "right": [[157.0, 88.0], [156.0, 100.1], [160.6, 108.0], [166.8, 116.0], [178.9, 117.0], [191.4, 117.0], [202.6, 116.0], [215.1, 116.0], [222.9, 111.0], [229.0, 104.0], [229.0, 91.5], [219.4, 88.0], [206.9, 88.0], [194.5, 88.0], [182.0, 88.0], [169.5, 88.0]]},
-    "Skeptic": {"left": [[73.0, 47.0], [63.0, 58.0], [61.0, 74.7], [61.0, 92.7], [64.4, 108.0], [73.0, 119.8], [89.0, 121.0], [107.1, 121.0], [125.2, 121.0], [132.3, 108.7], [137.0, 94.3], [137.0, 76.3], [137.0, 58.2], [125.1, 49.1], [109.1, 47.0], [91.1, 47.0]], "right": [[209.0, 70.0], [197.4, 75.0], [181.9, 75.0], [168.1, 77.0], [152.6, 77.0], [147.0, 88.0], [147.0, 103.4], [153.0, 114.7], [162.9, 122.0], [178.3, 122.0], [193.4, 121.0], [208.6, 121.6], [218.0, 115.2], [223.0, 103.6], [223.0, 88.1], [221.3, 73.3]]},
-    "sus": {"left": [[81.0, 67.0], [76.0, 74.8], [76.0, 86.4], [81.1, 94.1], [91.3, 96.0], [102.9, 96.0], [114.5, 96.0], [126.1, 96.0], [137.7, 96.0], [142.0, 87.5], [142.0, 75.9], [135.0, 71.0], [127.4, 67.0], [115.8, 67.0], [104.2, 67.0], [92.6, 67.0]], "right": [[180.0, 70.0], [170.1, 72.0], [159.1, 73.0], [156.0, 81.2], [156.6, 92.0], [165.1, 96.0], [176.4, 96.0], [187.8, 96.0], [199.1, 96.0], [210.5, 96.0], [219.3, 92.7], [223.0, 84.1], [222.1, 73.1], [214.0, 70.0], [202.7, 70.0], [191.3, 70.0]]},
-    "Squint": {"left": [[62.0, 67.0], [60.0, 76.8], [67.7, 81.0], [78.4, 81.0], [89.0, 81.0], [99.7, 81.0], [110.4, 81.0], [121.0, 81.0], [131.2, 81.8], [133.0, 71.9], [126.0, 67.0], [115.4, 67.0], [104.7, 67.0], [94.0, 67.0], [83.3, 67.0], [72.7, 67.0]], "right": [[147.0, 67.0], [147.0, 77.7], [153.5, 82.0], [163.8, 81.0], [174.5, 81.0], [185.2, 81.0], [196.0, 81.0], [206.7, 81.0], [217.4, 81.0], [219.0, 71.3], [211.4, 67.0], [200.6, 67.0], [189.9, 67.0], [179.2, 67.0], [168.5, 67.0], [157.7, 67.0]]},
-    "sleepy": {"left": [[125.0, 61.0], [113.1, 64.0], [99.4, 64.0], [86.1, 64.9], [78.0, 71.1], [78.0, 84.8], [78.5, 98.0], [89.0, 103.0], [102.7, 103.0], [116.4, 103.0], [127.7, 100.0], [141.4, 100.0], [148.0, 92.3], [149.0, 79.0], [146.7, 67.0], [138.3, 62.0]], "right": [[161.0, 77.0], [161.0, 87.7], [166.5, 92.0], [177.1, 92.0], [187.8, 92.0], [195.0, 96.0], [205.7, 96.0], [216.3, 96.0], [227.0, 96.0], [228.0, 86.3], [217.7, 86.0], [207.3, 85.3], [199.2, 82.0], [188.6, 82.0], [178.2, 81.2], [171.7, 77.0]]},
-    "Focused_or_Determined": {"left": [[68.0, 59.0], [62.5, 68.5], [63.0, 81.8], [67.5, 91.0], [80.9, 91.0], [94.3, 91.0], [107.8, 91.0], [121.2, 91.0], [134.6, 91.0], [140.0, 82.7], [140.0, 69.2], [135.1, 59.1], [121.7, 59.0], [108.2, 59.0], [94.8, 59.0], [81.4, 59.0]], "right": [[156.0, 59.0], [151.0, 68.6], [151.0, 82.1], [156.8, 91.0], [170.2, 91.0], [183.7, 91.0], [197.2, 91.0], [210.6, 91.0], [224.1, 90.9], [229.0, 81.2], [229.0, 67.8], [222.5, 59.0], [209.9, 59.0], [196.4, 59.0], [182.9, 59.0], [169.5, 59.0]]}
-  };
+// --- State & Config ---
+const CONFIG_KEY = "gps_hud_settings_v2";
+const TRIP_KEY = "gps_hud_trip_data_v2";
+const DRIVES_KEY = "gps_hud_drive_records_v1";
 
-  SHAPES["Love"] = { "left": SHAPES["Awe"].left, "right": SHAPES["Awe"].right };
-  SHAPES["Mischievous"] = { "left": SHAPES["Squint"].left, "right": SHAPES["Neutral"].right };
-  SHAPES["Processing"] = { "left": SHAPES["Blink"].left, "right": SHAPES["Blink"].right };
-  SHAPES["Dizzy"] = { "left": SHAPES["sus"].left, "right": SHAPES["surprised"].right };
-  SHAPES["Relieved"] = { "left": SHAPES["Sad__look_down_"].left, "right": SHAPES["Sad__look_down_"].right };
+const defaultSettings = {
+  unit: "kmh",
+  mirror: false,
+  rotate: false,
+  wakelock: true,
+  showClock: true,
+  showCompass: true,
+  showLocation: true,
+  showMaxSpeed: true,
+  showAvgSpeed: true,
+  showTripDist: true,
+  showTripTime: true,
+  showAltitude: true,
+  showAccel: false,
+  showGforce: false
+};
 
-  const ORDER = Object.keys(SHAPES);
-  const CANDIDATES = ORDER.filter(k => k !== 'Blink' && k !== 'Neutral');
-  
-  const COLOR_NEUTRAL = "#ffffff";
-  const COLOR_GREEN   = "#32d74b";
-  const COLOR_BLUE    = "#0a84ff"; 
-  const COLOR_ORANGE  = "#ff9f0a"; 
-  const COLOR_RED     = "#ff453a"; 
-  const COLOR_PURPLE  = "#bf5af2"; 
-  const COLOR_PINK    = "#ff2d55"; 
+let settings = Object.assign({}, defaultSettings);
+try {
+  const saved = localStorage.getItem(CONFIG_KEY);
+  if (saved) settings = Object.assign({}, defaultSettings, JSON.parse(saved));
+} catch(e){}
 
-  const EXPR_DATA = {
-    "Neutral":               { c: COLOR_NEUTRAL, m: [[125,135], [135,135], [145,135], [155,135], [165,135]], h: null, mo: 0 },
-    "Blink":                 { c: COLOR_NEUTRAL, m: [[125,135], [135,135], [145,135], [155,135], [165,135]], h: null, mo: 0 },
-    "Happy":                 { c: COLOR_GREEN,   m: [[120,130], [130,145], [145,150], [160,145], [170,130]], h: null, mo: 1 },
-    "Glee":                  { c: COLOR_GREEN,   m: [[115,125], [130,148], [145,155], [160,148], [175,125]], h: "hud-glee", mo: 1 },
-    "Awe":                   { c: COLOR_BLUE,    m: [[145,125], [155,135], [145,145], [135,135], [145,125]], h: null, mo: 1 },
-    "surprised":             { c: COLOR_ORANGE,  m: [[145,130], [150,135], [145,140], [140,135], [145,130]], h: "hud-surprised", mo: 1 },
-    "Scared":                { c: COLOR_ORANGE,  m: [[130,145], [137,135], [145,132], [153,135], [160,145]], h: "hud-scared", mo: 1 },
-    "worry":                 { c: COLOR_ORANGE,  m: [[130,138], [137,134], [145,132], [152,134], [160,138]], h: "hud-scared", mo: 0 },
-    "sad__look_at_user_":    { c: COLOR_BLUE,    m: [[125,145], [135,135], [145,133], [155,135], [165,145]], h: null, mo: 0 },
-    "Sad__look_down_":       { c: COLOR_BLUE,    m: [[128,142], [136,138], [145,136], [154,138], [162,142]], h: null, mo: 0 },
-    "Furious":               { c: COLOR_RED,     m: [[125,142], [135,132], [145,142], [155,132], [165,142]], h: "hud-furious", mo: 1 },
-    "angery":                { c: COLOR_RED,     m: [[128,138], [136,134], [145,138], [154,134], [162,138]], h: "hud-furious", mo: 1 },
-    "annoyed":               { c: COLOR_RED,     m: [[125,132], [135,135], [145,135], [155,135], [165,138]], h: null, mo: 0 },
-    "Frustrated_or_Bored":   { c: COLOR_NEUTRAL, m: [[125,135], [135,135], [145,135], [155,135], [165,135]], h: null, mo: 0 },
-    "Unimpressed":           { c: COLOR_NEUTRAL, m: [[128,136], [136,136], [145,136], [154,136], [162,136]], h: null, mo: 0 },
-    "Skeptic":               { c: COLOR_PURPLE,  m: [[125,135], [135,135], [145,132], [155,128], [165,122]], h: "hud-skeptic", mo: 1 },
-    "sus":                   { c: COLOR_PURPLE,  m: [[128,135], [136,135], [145,133], [154,131], [162,129]], h: null, mo: 0 },
-    "Squint":                { c: COLOR_NEUTRAL, m: [[130,135], [137,135], [145,135], [152,135], [160,135]], h: null, mo: 0 },
-    "sleepy":                { c: COLOR_BLUE,    m: [[135,138], [140,140], [145,142], [150,140], [155,138]], h: "hud-sleepy", mo: 0 },
-    "Focused_or_Determined": { c: COLOR_NEUTRAL, m: [[132,135], [138,135], [145,135], [152,135], [158,135]], h: null, mo: 0 },
-    "Love":                  { c: COLOR_PINK,    m: [[120,130], [135,148], [145,152], [155,148], [170,130]], h: "hud-love", mo: 1 },
-    "Mischievous":           { c: COLOR_PURPLE,  m: [[125,135], [135,135], [145,135], [155,130], [165,125]], h: null, mo: 1 },
-    "Processing":            { c: COLOR_BLUE,    m: [[135,135], [140,135], [145,135], [150,135], [155,135]], h: "hud-processing", mo: 0 },
-    "Dizzy":                 { c: COLOR_ORANGE,  m: [[125,140], [135,130], [145,145], [155,130], [165,140]], h: "hud-dizzy", mo: 1 },
-    "Relieved":              { c: COLOR_GREEN,   m: [[130,135], [137,140], [145,142], [152,140], [160,135]], h: null, mo: 1 }
-  };
+function saveSettings(){
+  try {
+    localStorage.setItem(CONFIG_KEY, JSON.stringify(settings));
+  } catch(e){}
+}
 
-  const pathLeft = document.getElementById('pathLeft');
-  const pathRight = document.getElementById('pathRight');
-  const pathMouth = document.getElementById('pathMouth');
-  const eyesGroup = document.getElementById('eyesGroup');
-  const liveDot = document.getElementById('liveDot');
-  const svgEl = document.getElementById('svg');
+let tripData = {
+  maxSpeedMs: 0,
+  distanceMeters: 0,
+  movingTimeSec: 0,
+  speedSum: 0,
+  speedCount: 0,
+  maxGForce: 0
+};
+try {
+  const savedTrip = localStorage.getItem(TRIP_KEY);
+  if (savedTrip) tripData = Object.assign({}, tripData, JSON.parse(savedTrip));
+} catch(e){}
 
-  function catmullRomToBezier(pts, closed = true) {
-    const n = pts.length;
-    if (n === 0) return '';
-    let d = `M ${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)} `;
-    if (closed) {
-      for (let i = 0; i < n; i++) {
-        const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
-        const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
-        const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
-        d += `C ${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)} `;
-      }
-      return d + 'Z';
+function saveTripData(){
+  try {
+    localStorage.setItem(TRIP_KEY, JSON.stringify(tripData));
+  } catch(e){}
+}
+
+// --- DOM References ---
+const speedEl = document.getElementById("speed");
+const unitDisplayEl = document.getElementById("unit-display");
+const roadLocationEl = document.getElementById("road-location");
+const indicatorEl = document.getElementById("status-indicator");
+const clockEl = document.getElementById("hud-clock");
+const compassEl = document.getElementById("hud-compass");
+const compassCardinalEl = document.getElementById("compass-cardinal");
+const compassDegEl = document.getElementById("compass-deg");
+
+const tileMaxSpeed = document.getElementById("tile-max-speed");
+const tileAvgSpeed = document.getElementById("tile-avg-speed");
+const tileTripDist = document.getElementById("tile-trip-dist");
+const tileTripTime = document.getElementById("tile-trip-time");
+const tileAltitude = document.getElementById("tile-altitude");
+const tileAccel = document.getElementById("tile-accel");
+const tileGforce = document.getElementById("tile-gforce");
+
+const valMaxSpeed = document.getElementById("val-max-speed");
+const valAvgSpeed = document.getElementById("val-avg-speed");
+const valTripDist = document.getElementById("val-trip-dist");
+const valTripTime = document.getElementById("val-trip-time");
+const valAltitude = document.getElementById("val-altitude");
+const valAccel = document.getElementById("val-accel");
+const valGforce = document.getElementById("val-gforce");
+const accelLabel = document.getElementById("accel-label");
+
+const unitTexts = document.querySelectorAll(".unit-text");
+const distUnitTexts = document.querySelectorAll(".dist-unit-text");
+const altUnitTexts = document.querySelectorAll(".alt-unit-text");
+
+// Modal & Buttons
+const settingsModal = document.getElementById("settings-modal");
+const settingsOpenBtn = document.getElementById("settings-open-btn");
+const settingsCloseBtn = document.getElementById("settings-close-btn");
+const modalDoneBtn = document.getElementById("modal-done-btn");
+const mirrorToggleBtn = document.getElementById("mirror-toggle-btn");
+const rotateToggleBtn = document.getElementById("rotate-toggle-btn");
+const confirmModal = document.getElementById("confirm-modal");
+const confirmModalCancel = document.getElementById("confirm-modal-cancel");
+const confirmModalOk = document.getElementById("confirm-modal-ok");
+const btnUnitKmh = document.getElementById("btn-unit-kmh");
+const btnUnitMph = document.getElementById("btn-unit-mph");
+const btnResetTrip = document.getElementById("btn-reset-trip");
+const tripStartBtn = document.getElementById("trip-start-btn");
+const tripResetBtn = document.getElementById("trip-reset-btn");
+const checkRotate = document.getElementById("check-rotate");
+const btnSaveDrive = document.getElementById("btn-save-drive");
+const btnExportDrives = document.getElementById("btn-export-drives");
+const btnClearDrives = document.getElementById("btn-clear-drives");
+const driveRecordsList = document.getElementById("drive-records-list");
+
+// Checkboxes
+const checkClock = document.getElementById("check-clock");
+const checkCompass = document.getElementById("check-compass");
+const checkLocation = document.getElementById("check-location");
+const checkMaxSpeed = document.getElementById("check-max-speed");
+const checkAvgSpeed = document.getElementById("check-avg-speed");
+const checkTripDist = document.getElementById("check-trip-dist");
+const checkTripTime = document.getElementById("check-trip-time");
+const checkAltitude = document.getElementById("check-altitude");
+const checkAccel = document.getElementById("check-accel");
+const checkGforce = document.getElementById("check-gforce");
+const checkMirror = document.getElementById("check-mirror");
+const checkWakelock = document.getElementById("check-wakelock");
+
+// --- Runtime Variables ---
+let watchId = null;
+let currentSpeedKmh = 0;
+let lastLat = null;
+let lastLon = null;
+let lastGeocodeTime = 0;
+let lastGeocodeLat = null;
+let lastGeocodeLon = null;
+let wakeLockSentinel = null;
+
+// Acceleration test states
+let accelState = "ready"; // "ready" | "running" | "done"
+let accelStartTime = 0;
+let accelArmed = true;
+let lastAccelResult = null;
+
+// G-Force
+let gForceCurrent = 0;
+let gForceListenerAttached = false;
+let lastGpsTime = null;
+let lastGpsSpeed = null;
+let lastHeading = null;
+
+// --- Apply UI from Settings ---
+function applyLayoutSettings(){
+  document.body.classList.toggle("mirror-mode", settings.mirror);
+  checkMirror.checked = settings.mirror;
+
+  document.body.classList.toggle("manual-rotated", settings.rotate);
+  checkRotate.checked = settings.rotate;
+
+  checkWakelock.checked = settings.wakelock;
+
+  // Header items
+  clockEl.classList.toggle("hidden", !settings.showClock);
+  checkClock.checked = settings.showClock;
+
+  compassEl.classList.toggle("hidden", !settings.showCompass);
+  checkCompass.checked = settings.showCompass;
+
+  roadLocationEl.classList.toggle("hidden", !settings.showLocation);
+  checkLocation.checked = settings.showLocation;
+
+  // Dashboard tiles
+  tileMaxSpeed.classList.toggle("hidden", !settings.showMaxSpeed);
+  checkMaxSpeed.checked = settings.showMaxSpeed;
+
+  tileAvgSpeed.classList.toggle("hidden", !settings.showAvgSpeed);
+  checkAvgSpeed.checked = settings.showAvgSpeed;
+
+  tileTripDist.classList.toggle("hidden", !settings.showTripDist);
+  checkTripDist.checked = settings.showTripDist;
+
+  tileTripTime.classList.toggle("hidden", !settings.showTripTime);
+  checkTripTime.checked = settings.showTripTime;
+
+  tileAltitude.classList.toggle("hidden", !settings.showAltitude);
+  checkAltitude.checked = settings.showAltitude;
+
+  tileAccel.classList.toggle("hidden", !settings.showAccel);
+  checkAccel.checked = settings.showAccel;
+
+  tileGforce.classList.toggle("hidden", !settings.showGforce);
+  checkGforce.checked = settings.showGforce;
+
+  updateTilesExpansion();
+
+  // Unit buttons
+  const isKmh = settings.unit === "kmh";
+  btnUnitKmh.className = "btn " + (isKmh ? "btn-primary" : "btn-secondary");
+  btnUnitMph.className = "btn " + (!isKmh ? "btn-primary" : "btn-secondary");
+
+  unitDisplayEl.textContent = isKmh ? "KM/H" : "MPH";
+  accelLabel.textContent = isKmh ? "0-100 km/h" : "0-60 mph";
+
+  unitTexts.forEach(el => el.textContent = isKmh ? "km/h" : "mph");
+  distUnitTexts.forEach(el => el.textContent = isKmh ? "km" : "mi");
+  altUnitTexts.forEach(el => el.textContent = isKmh ? "m" : "ft");
+
+  updateDashboardStats();
+
+  if (settings.showGforce && !gForceListenerAttached) {
+    initGForceSensor();
+  }
+}
+
+function updateTilesExpansion(){
+  const allTiles = [
+    tileMaxSpeed,
+    tileAvgSpeed,
+    tileTripDist,
+    tileTripTime,
+    tileAltitude,
+    tileAccel,
+    tileGforce
+  ];
+  allTiles.forEach(t => t.classList.remove("tile-expanded"));
+  const visibleTiles = allTiles.filter(t => !t.classList.contains("hidden"));
+  if (visibleTiles.length % 2 === 1) {
+    visibleTiles[visibleTiles.length - 1].classList.add("tile-expanded");
+  }
+}
+
+// --- Conversion Helpers ---
+function msToUserSpeed(ms){
+  return settings.unit === "kmh" ? ms * 3.6 : ms * 2.23694;
+}
+
+function metersToUserDist(m){
+  return settings.unit === "kmh" ? m / 1000 : m / 1609.344;
+}
+
+function metersToUserAlt(m){
+  return settings.unit === "kmh" ? m : m * 3.28084;
+}
+
+function formatDuration(totalSec){
+  const hrs = Math.floor(totalSec / 3600);
+  const mins = Math.floor((totalSec % 3600) / 60);
+  const secs = Math.floor(totalSec % 60);
+  if (hrs > 0) {
+    return hrs + ":" + String(mins).padStart(2, "0") + ":" + String(secs).padStart(2, "0");
+  }
+  return String(mins).padStart(2, "0") + ":" + String(secs).padStart(2, "0");
+}
+
+function getCardinal(deg){
+  if (deg === null || isNaN(deg)) return "--";
+  const cardinals = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  const normalized = ((Math.round(deg / 45) % 8) + 8) % 8;
+  return cardinals[normalized];
+}
+
+// Haversine formula for distance between two lat/lon points in meters
+function haversineDistance(lat1, lon1, lat2, lon2){
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// --- Clock Update ---
+function updateClock(){
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, "0");
+  const m = String(now.getMinutes()).padStart(2, "0");
+  clockEl.textContent = h + ":" + m;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// --- Trip Time Counter ---
+let saveThrottleCount = 0;
+setInterval(() => {
+  if (tripActive && currentSpeedKmh > 1.5) {
+    tripData.movingTimeSec++;
+    valTripTime.textContent = formatDuration(tripData.movingTimeSec);
+    saveThrottleCount++;
+    if (saveThrottleCount % 5 === 0) {
+      saveTripData();
+    }
+  }
+}, 1000);
+
+// --- Stats UI Update ---
+function updateDashboardStats(){
+  valMaxSpeed.textContent = Math.round(msToUserSpeed(tripData.maxSpeedMs));
+  // True average speed = total distance / total active moving time
+  const avgMs = tripData.movingTimeSec > 2
+    ? (tripData.distanceMeters / tripData.movingTimeSec)
+    : (tripData.speedCount > 0 ? (tripData.speedSum / tripData.speedCount) : 0);
+  valAvgSpeed.textContent = Math.round(msToUserSpeed(avgMs));
+  const dist = metersToUserDist(tripData.distanceMeters);
+  valTripDist.textContent = dist < 10 ? dist.toFixed(2) : dist.toFixed(1);
+  valTripTime.textContent = formatDuration(tripData.movingTimeSec);
+}
+
+// --- GPS Status Indicator ---
+function setGPSStatus(color, title){
+  indicatorEl.className = "indicator " + color;
+  indicatorEl.setAttribute("title", title || "");
+  indicatorEl.setAttribute("aria-label", title || color);
+}
+
+// --- Free Reverse Geocoding (Forever Free BigDataCloud / OpenStreetMap) ---
+async function fetchRoadLocation(lat, lon){
+  if (!settings.showLocation) return;
+  const now = Date.now();
+  if (now - lastGeocodeTime < 10000) return; // Throttle to 10s minimum
+
+  if (lastGeocodeLat !== null) {
+    const dist = haversineDistance(lastGeocodeLat, lastGeocodeLon, lat, lon);
+    if (dist < 40) return; // Only re-fetch if moved at least 40m
+  }
+
+  lastGeocodeTime = now;
+  lastGeocodeLat = lat;
+  lastGeocodeLon = lon;
+
+  try {
+    const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Geocode fetch error");
+    const data = await res.json();
+    
+    let locationText = "";
+    if (data.locality) locationText = data.locality;
+    if (data.city && data.city !== data.locality) {
+      locationText = locationText ? `${locationText}, ${data.city}` : data.city;
+    }
+    if (!locationText && data.principalSubdivision) {
+      locationText = data.principalSubdivision;
+    }
+    if (locationText) {
+      roadLocationEl.textContent = locationText;
+    }
+  } catch(err){
+    // Silently retain previous name on network fail
+  }
+}
+
+// --- Acceleration Timer (0-100 km/h or 0-60 mph) ---
+function handleAccelTimer(speedMs){
+  const targetSpeedKmh = settings.unit === "kmh" ? 100 : 96.56; // 100 km/h or 60 mph
+  const currentKmh = speedMs * 3.6;
+
+  if (accelState === "ready") {
+    if (currentKmh <= 0.8) {
+      accelArmed = true;
+      valAccel.textContent = lastAccelResult ? lastAccelResult : "Ready";
+    } else if (accelArmed && currentKmh > 0.8) {
+      accelArmed = false;
+      accelState = "running";
+      accelStartTime = performance.now();
+      valAccel.textContent = "Go!";
+    }
+  } else if (accelState === "running") {
+    const elapsed = ((performance.now() - accelStartTime) / 1000).toFixed(2);
+    valAccel.textContent = elapsed + "s";
+    if (currentKmh >= targetSpeedKmh) {
+      accelState = "done";
+      lastAccelResult = elapsed + "s";
+      valAccel.textContent = elapsed + "s";
+    }
+  } else if (accelState === "done") {
+    // Re-arm for next run when vehicle stops, while keeping final time displayed
+    if (currentKmh <= 0.8) {
+      accelArmed = true;
+      accelState = "ready";
+    }
+  }
+}
+
+// --- G-Force Sensor (iOS & Mobile Web) ---
+function initGForceSensor(){
+  if (typeof DeviceMotionEvent !== "undefined") {
+    if (typeof DeviceMotionEvent.requestPermission === "function") {
+      DeviceMotionEvent.requestPermission()
+        .then(state => {
+          if (state === "granted") attachDeviceMotion();
+        })
+        .catch(() => {});
     } else {
-      for (let i = 0; i < n - 1; i++) {
-        const p0 = i === 0 ? pts[0] : pts[i - 1], p1 = pts[i], p2 = pts[i + 1], p3 = i + 2 < n ? pts[i + 2] : p2;
-        const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
-        const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
-        d += `C ${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)} `;
+      attachDeviceMotion();
+    }
+  }
+}
+
+function attachDeviceMotion(){
+  if (gForceListenerAttached) return;
+  window.addEventListener("devicemotion", event => {
+    // Linear acceleration excluding Earth's gravity
+    const acc = event.acceleration;
+    if (acc && (acc.x !== null || acc.y !== null || acc.z !== null)) {
+      const ax = acc.x || 0;
+      const ay = acc.y || 0;
+      const az = acc.z || 0;
+      const magMs2 = Math.sqrt(ax * ax + ay * ay + az * az);
+      let g = magMs2 / 9.80665;
+      if (g < 0.04) g = 0; // Filter standing noise / idle vibrations
+      gForceCurrent = gForceCurrent * 0.7 + g * 0.3;
+      valGforce.textContent = Math.min(gForceCurrent, 4.0).toFixed(2);
+      if (tripActive && gForceCurrent > tripData.maxGForce) {
+        tripData.maxGForce = gForceCurrent;
       }
-      return d;
+      gForceListenerAttached = true;
     }
-  }
-
-  function smootherstep(t) { return t * t * (3 - 2 * t); }
-  function lerp(a, b, t) { return a + (b - a) * t; }
-  function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
-  function lerpPts(a, b, t) { return a.map((p, i) => [p[0] + (b[i][0] - p[0]) * t, p[1] + (b[i][1] - p[1]) * t]); }
-
-  let curLeft = SHAPES['Neutral'].left.map(p => p.slice());
-  let curRight = SHAPES['Neutral'].right.map(p => p.slice());
-  let curMouth = EXPR_DATA['Neutral'].m.map(p => p.slice());
-  
-  let baseExpr = 'Neutral';
-  let currentExpr = 'Neutral';
-  let morphAnim = null;
-
-  let running = true;
-  let currentSpeedKmh = 0;
-  let drivingArousalBoost = 0;     
-  let driveTiltX = 0, driveTiltY = 0, driveRoll = 0;
-  let smoothedForward = 0; 
-  
-  const exprMenu = document.getElementById('exprMenu');
-  const hiddenTrigger = document.getElementById('hiddenTrigger');
-  let debugMode = false;
-  let debugTimer = null;
-
-  ORDER.forEach(key => {
-    const btn = document.createElement('div');
-    btn.className = 'expr-btn';
-    btn.textContent = key.replace(/_/g, ' '); 
-    btn.onclick = (e) => {
-      e.stopPropagation();
-      resetDebugTimer();
-      baseExpr = key;
-      morphTo(key, 350);
-    };
-    exprMenu.appendChild(btn);
-  });
-
-  function resetDebugTimer() {
-    debugMode = true;
-    exprMenu.classList.add('open');
-    clearTimeout(debugTimer);
-    debugTimer = setTimeout(() => {
-      debugMode = false;
-      exprMenu.classList.remove('open');
-      baseExpr = 'Neutral';
-      morphTo('Neutral', 400);
-    }, 5000);
-  }
-
-  hiddenTrigger.addEventListener('click', (e) => {
-    e.stopPropagation();
-    resetDebugTimer();
-  });
-
-  function applyPhysics(pts) {
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    for (let p of pts) {
-      if (p[0] < minX) minX = p[0]; if (p[0] > maxX) maxX = p[0];
-      if (p[1] < minY) minY = p[1]; if (p[1] > maxY) maxY = p[1];
-    }
-    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-    const sf = clamp(smoothedForward, -8, 8);
-    const sx = 1 + (sf * 0.035), sy = 1 - (sf * 0.035); 
-    const skew = driveTiltX * -0.025; 
-    let jx = 0, jy = 0;
-    if (drivingArousalBoost > 0.6) {
-      const intensity = (drivingArousalBoost - 0.6) * 2.5;
-      jx = (Math.random() - 0.5) * 2 * intensity;
-      jy = (Math.random() - 0.5) * 2 * intensity;
-    }
-    return pts.map(p => {
-      let dx = p[0] - cx, dy = p[1] - cy;
-      dx += dy * skew; 
-      return [cx + (dx * sx) + jx, cy + (dy * sy) + jy];
-    });
-  }
-
-  function render() {
-    pathLeft.setAttribute('d', catmullRomToBezier(applyPhysics(curLeft), true));
-    pathRight.setAttribute('d', catmullRomToBezier(applyPhysics(curRight), true));
-    pathMouth.setAttribute('d', catmullRomToBezier(applyPhysics(curMouth), false));
-  }
-
-  function morphTo(key, duration, cb) {
-    cancelAnimationFrame(morphAnim);
-    const startL = curLeft.map(p => p.slice()), startR = curRight.map(p => p.slice());
-    const startM = curMouth.map(p => p.slice());
-    
-    const endL = SHAPES[key].left, endR = SHAPES[key].right;
-    const endM = EXPR_DATA[key].m;
-    const targetColor = EXPR_DATA[key].c;
-    const targetHUD = EXPR_DATA[key].h;
-
-    eyesGroup.style.fill = targetColor;
-    pathMouth.style.stroke = targetColor;
-    pathMouth.style.opacity = EXPR_DATA[key].mo !== undefined ? EXPR_DATA[key].mo : 1;
-    
-    document.querySelectorAll('.hud-item').forEach(el => el.classList.remove('active'));
-    if (targetHUD) document.getElementById(targetHUD).classList.add('active');
-
-    const t0 = performance.now();
-    function step(now) {
-      const t = Math.min(1, (now - t0) / duration);
-      const te = smootherstep(t);
-      curLeft = lerpPts(startL, endL, te);
-      curRight = lerpPts(startR, endR, te);
-      curMouth = lerpPts(startM, endM, te);
-      if (t < 1) { morphAnim = requestAnimationFrame(step); }
-      else { currentExpr = key; if (cb) cb(); }
-    }
-    morphAnim = requestAnimationFrame(step);
-  }
-
-  let lastActivity = performance.now();
-  function markActivity() { lastActivity = performance.now(); }
-  function idleSeconds() { return (performance.now() - lastActivity) / 1000; }
-
-  let pointer = { x: null, y: null };
-  function setPointer(clientX, clientY) {
-    const r = svgEl.getBoundingClientRect();
-    pointer.x = (clientX - r.left) / r.width;   
-    pointer.y = (clientY - r.top) / r.height;   
-    markActivity();
-  }
-  window.addEventListener('mousemove', e => setPointer(e.clientX, e.clientY));
-  window.addEventListener('touchmove', e => {
-    if (e.touches[0]) setPointer(e.touches[0].clientX, e.touches[0].clientY);
   }, { passive: true });
-  window.addEventListener('mousedown', markActivity);
-  window.addEventListener('touchstart', markActivity, { passive: true });
-  window.addEventListener('keydown', markActivity);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) markActivity(); });
+}
 
-  let gazeX = 0, gazeY = 0;       
-  let wanderTarget = { x: 0, y: 0 };
-  function pickWanderTarget() {
-    wanderTarget.x = (Math.random() - 0.5) * 2;
-    wanderTarget.y = (Math.random() - 0.5) * 2;
-    setTimeout(pickWanderTarget, 1800 + Math.random() * 2600);
+// --- Screen Wake Lock (Keep Screen Awake on iPhone / Mobile) ---
+async function requestWakeLock(){
+  if (!settings.wakelock) {
+    releaseWakeLock();
+    return;
   }
-  pickWanderTarget();
-
-  let microJitterX = 0, microJitterY = 0, microJitterUntil = 0;
-  function maybeMicroSaccade() {
-    if (Math.random() < 0.5) {
-      microJitterX = (Math.random() - 0.5) * 3;
-      microJitterY = (Math.random() - 0.5) * 1.6;
-      microJitterUntil = performance.now() + 120 + Math.random() * 160;
+  try {
+    if ("wakeLock" in navigator && !wakeLockSentinel) {
+      wakeLockSentinel = await navigator.wakeLock.request("screen");
+      wakeLockSentinel.addEventListener("release", () => {
+        wakeLockSentinel = null;
+      });
     }
-    setTimeout(maybeMicroSaccade, 350 + Math.random() * 500);
+  } catch(e){}
+}
+
+function releaseWakeLock(){
+  if (wakeLockSentinel) {
+    wakeLockSentinel.release().catch(()=>{});
+    wakeLockSentinel = null;
   }
-  maybeMicroSaccade();
+}
 
-  function updateGaze() {
-    const usingPointer = pointer.x !== null && idleSeconds() < 6;
-    let tx, ty;
-    if (usingPointer) {
-      tx = (pointer.x - 0.5) * 2;
-      ty = (pointer.y - 0.5) * 2;
-    } else {
-      tx = wanderTarget.x;
-      ty = wanderTarget.y;
-    }
-    const maxOffset = 7; 
-    let jx = 0, jy = 0;
-    if (performance.now() < microJitterUntil) { jx = microJitterX; jy = microJitterY; }
-    gazeX = lerp(gazeX, tx * maxOffset + jx, 0.06);
-    gazeY = lerp(gazeY, ty * maxOffset * 0.5 + jy, 0.06);
-    const ex = gazeX + driveTiltX, ey = gazeY + driveTiltY;
-    eyesGroup.setAttribute('transform', `translate(${ex.toFixed(1)},${ey.toFixed(1)})`);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && settings.wakelock) {
+    requestWakeLock();
   }
+});
 
-  let breatheStart = performance.now();
-  let lastOrientAt = 0;
+// --- GPS Watcher ---
+function startGPS(){
+  if (simActive) return;
 
-  function mainLoop(now) {
-    updateGaze();
-
-    if (performance.now() - lastOrientAt > 1200) {
-      driveTiltX = lerp(driveTiltX, 0, 0.04);
-      driveTiltY = lerp(driveTiltY, 0, 0.04);
-      driveRoll = lerp(driveRoll, 0, 0.04);
-      smoothedForward = lerp(smoothedForward, 0, 0.04);
-    }
-
-    const arousalNorm = clamp(drivingArousalBoost, 0, 1);
-    const t = (now - breatheStart) / 1000;
-    const speed = lerp(0.9, 1.6, arousalNorm);
-    const s = 1 + Math.sin(t * speed) * 0.012;
-    svgEl.style.transform = `scale(${s}) rotate(${driveRoll.toFixed(2)}deg)`;
-
-    render();
-    requestAnimationFrame(mainLoop);
-  }
-  requestAnimationFrame(mainLoop);
-
-  const driveBtn = document.getElementById('driveBtn');
-  let driveEnabled = false;
-  let orientBaseline = { beta: 0, gamma: 0 };
-  let lastGamma = null, lastGammaTime = performance.now();
-  let lastReactAt = 0;
-
-  function calibrateBaseline(beta, gamma) {
-    orientBaseline.beta = beta || 0;
-    orientBaseline.gamma = gamma || 0;
+  if (!("geolocation" in navigator)) {
+    setGPSStatus("red", "GPS not supported");
+    return;
   }
 
-  function driveReact(key, dv, da, snapBack) {
-    const now = performance.now();
-    if (now - lastReactAt < 500) return;
-    lastReactAt = now;
-    markActivity();
-    morphTo(key, 110, () => {
-      setTimeout(() => { if (running && !debugMode) morphTo(baseExpr, snapBack || 300); }, 450);
-    });
+  setGPSStatus("orange", "Acquiring GPS fix…");
+
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
   }
 
-  function handleOrientation(e) {
-    if (e.beta === null || e.gamma === null) return;
-    lastOrientAt = performance.now();
-    const pitch = clamp((e.beta - orientBaseline.beta) / 30, -1, 1);   
-    const roll  = clamp((e.gamma - orientBaseline.gamma) / 30, -1, 1); 
+  watchId = navigator.geolocation.watchPosition(
+    position => {
+      if (simActive) return;
 
-    driveTiltX = lerp(driveTiltX, roll * 9, 0.15);
-    driveTiltY = lerp(driveTiltY, -pitch * 5, 0.15);
-    driveRoll  = lerp(driveRoll, roll * 4, 0.12);
+      const coords = position.coords;
+      const accuracy = coords.accuracy;
+      const rawSpeed = coords.speed;
 
-    const now = performance.now();
-    const dt = (now - lastGammaTime) / 1000;
-    
-    if (lastGamma !== null && dt > 0) {
-      const rate = (e.gamma - lastGamma) / dt; 
-      if (Math.abs(rate) > 40) {
-        if (Math.abs(rate) > 130 && drivingArousalBoost > 0.3) {
-            driveReact('Dizzy', -0.2, 0.5, 1500); 
-        } else if (drivingArousalBoost > 0.6) {
-            driveReact(Math.abs(rate) > 90 ? 'Scared' : 'worry', -0.1, 0.35); 
-        } else if (drivingArousalBoost > 0.15) {
-            driveReact('Focused_or_Determined', 0.0, 0.2); 
+      // Speed
+      let speedMs = 0;
+      if (Number.isFinite(rawSpeed) && rawSpeed >= 0) {
+        speedMs = rawSpeed;
+        currentSpeedKmh = speedMs * 3.6;
+        const displaySpeed = Math.round(msToUserSpeed(speedMs));
+        speedEl.textContent = displaySpeed;
+
+        if (tripActive && speedMs > 0.8) {
+          tripData.speedSum += speedMs;
+          tripData.speedCount++;
+          if (speedMs > tripData.maxSpeedMs) {
+            tripData.maxSpeedMs = speedMs;
+          }
+        }
+      } else {
+        currentSpeedKmh = 0;
+        speedEl.textContent = "0";
+      }
+
+      // Distance via coordinates (only accumulate when moving to prevent stationary GPS drift)
+      if (tripActive && lastLat !== null && lastLon !== null) {
+        if (accuracy < 35 && speedMs > 0.6) {
+          const d = haversineDistance(lastLat, lastLon, coords.latitude, coords.longitude);
+          if (d >= 0.8 && d < 200) {
+            tripData.distanceMeters += d;
+          }
         }
       }
-    }
-    lastGamma = e.gamma; lastGammaTime = now;
+      lastLat = coords.latitude;
+      lastLon = coords.longitude;
 
-    if (Math.abs(pitch) > 0.55 && Math.random() < 0.015) {
-      driveReact(pitch > 0 ? 'Awe' : 'surprised', pitch > 0 ? 0.1 : -0.1, 0.2, 260);
-    }
-  }
-
-  function handleMotion(e) {
-    const a = e.acceleration && (e.acceleration.y || e.acceleration.x)
-      ? e.acceleration : e.accelerationIncludingGravity;
-    if (!a) return;
-    const forward = a.y || 0;
-    smoothedForward = lerp(smoothedForward, forward, 0.25);
-
-    if (drivingArousalBoost > 0.1) {
-      if (smoothedForward < -6 && drivingArousalBoost > 0.5) {
-          driveReact('Scared', -0.3, 0.5); 
-      } else if (smoothedForward < -4) {
-          driveReact('surprised', -0.1, 0.3); 
-      } else if (smoothedForward > 5) {
-          driveReact('Glee', 0.3, 0.5); 
+      // Heading / Compass
+      let heading = coords.heading;
+      if (Number.isFinite(heading) && heading >= 0) {
+        const rounded = Math.round(heading);
+        compassDegEl.textContent = rounded + "°";
+        compassCardinalEl.textContent = getCardinal(rounded);
+      } else {
+        compassDegEl.textContent = "--°";
+        compassCardinalEl.textContent = "--";
+        heading = null;
       }
-    }
-  }
 
-  async function enableDriveMode() {
-    if (driveEnabled) return;
-    try {
-      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        if (await DeviceOrientationEvent.requestPermission() !== 'granted') return;
-      }
-      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-        if (await DeviceMotionEvent.requestPermission() !== 'granted') return;
-      }
-      window.addEventListener('deviceorientation', e => {
-        if (orientBaseline.beta === 0 && orientBaseline.gamma === 0) calibrateBaseline(e.beta, e.gamma);
-        handleOrientation(e);
-      });
-      window.addEventListener('devicemotion', handleMotion);
-      if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(pos => {
-          const speed = pos.coords.speed; 
-          if (speed !== null && speed >= 0) {
-            currentSpeedKmh = speed * 3.6;
-            drivingArousalBoost = clamp(currentSpeedKmh / 80, 0, 1);
+      // GPS-based dynamic G-Force (longitudinal acceleration + cornering)
+      if (!gForceListenerAttached && lastGpsTime !== null && lastGpsSpeed !== null) {
+        const dt = (position.timestamp - lastGpsTime) / 1000;
+        if (dt > 0.2 && dt < 3.0) {
+          const dv = speedMs - lastGpsSpeed;
+          const accelLong = dv / dt;
+          let accelLat = 0;
+          if (heading !== null && lastHeading !== null && speedMs > 1.5) {
+            let dHeading = Math.abs(heading - lastHeading);
+            if (dHeading > 180) dHeading = 360 - dHeading;
+            const turnRateRad = (dHeading * Math.PI / 180) / dt;
+            accelLat = speedMs * turnRateRad;
           }
-        }, () => {}, { enableHighAccuracy: true, maximumAge: 2000 });
+          const totalAccel = Math.sqrt(accelLong * accelLong + accelLat * accelLat);
+          const g = totalAccel / 9.80665;
+          gForceCurrent = gForceCurrent * 0.6 + g * 0.4;
+          valGforce.textContent = Math.min(gForceCurrent, 4.0).toFixed(2);
+          if (tripActive && gForceCurrent > tripData.maxGForce) {
+            tripData.maxGForce = gForceCurrent;
+          }
+        }
       }
-      driveEnabled = true;
-      driveBtn.classList.add('on');
-      driveBtn.style.display = 'none'; 
-    } catch (err) { console.warn('Drive mode sensor permission error', err); }
-  }
+      lastGpsTime = position.timestamp;
+      lastGpsSpeed = speedMs;
+      lastHeading = heading;
 
-  driveBtn.addEventListener('click', enableDriveMode);
-
-  const simPanel = document.getElementById('simPanel');
-  const simToggle = document.getElementById('simToggle');
-  const simSpeed = document.getElementById('simSpeed');
-  const simSpeedVal = document.getElementById('simSpeedVal');
-
-  simToggle.addEventListener('click', () => {
-    simPanel.classList.toggle('open');
-    simToggle.classList.toggle('open');
-  });
-
-  function simLean(dir) { 
-    lastOrientAt = performance.now();
-    driveTiltX = dir * 9; driveRoll = dir * 4;
-  }
-  const SIM_ACTIONS = {
-    turnL: () => { simLean(-1); 
-        if (currentSpeedKmh > 70) driveReact('Scared', -0.1, 0.35); 
-        else if (currentSpeedKmh > 40) driveReact('worry', -0.05, 0.25);
-        else if (currentSpeedKmh > 10) driveReact('Focused_or_Determined', 0, 0.15);
-    },
-    turnR: () => { simLean(1); 
-        if (currentSpeedKmh > 70) driveReact('Scared', -0.1, 0.35); 
-        else if (currentSpeedKmh > 40) driveReact('worry', -0.05, 0.25);
-        else if (currentSpeedKmh > 10) driveReact('Focused_or_Determined', 0, 0.15);
-    },
-    brake: () => { lastOrientAt = performance.now(); smoothedForward = -6; 
-        if (currentSpeedKmh > 50) driveReact('Scared', -0.3, 0.5);
-        else if (currentSpeedKmh > 10) driveReact('surprised', -0.1, 0.3);
-    },
-    accel: () => { lastOrientAt = performance.now(); smoothedForward = 6; driveReact('Glee', 0.3, 0.5); },
-    hillUp: () => driveReact('Awe', 0.1, 0.2, 260),
-    hillDown: () => driveReact('surprised', -0.1, 0.2, 260),
-    tiltL: () => simLean(-1),
-    tiltR: () => simLean(1),
-    spin: () => { driveTiltX = 20; driveRoll = 15; driveReact('Dizzy', -0.2, 0.5, 1500); }
-  };
-  simPanel.querySelectorAll('[data-sim]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      lastReactAt = 0; 
-      SIM_ACTIONS[btn.dataset.sim]();
-    });
-  });
-  simSpeed.addEventListener('input', () => {
-    currentSpeedKmh = Number(simSpeed.value);
-    drivingArousalBoost = clamp(currentSpeedKmh / 80, 0, 1);
-    simSpeedVal.textContent = currentSpeedKmh + ' km/h';
-  });
-
-  let keysDown = new Set();
-  let simSpeedKmh = 0;
-
-  window.addEventListener('keydown', e => {
-    if (!simPanel.classList.contains('open')) return;
-    const k = e.key.toLowerCase();
-    if (!['w', 'a', 's', 'd'].includes(k)) return;
-    e.preventDefault();
-    if (keysDown.has(k)) return; 
-    keysDown.add(k);
-    lastReactAt = 0; 
-    
-    if (k === 'w' && currentSpeedKmh < 15) driveReact('Glee', 0.3, 0.5);
-    if (k === 's' && currentSpeedKmh > 40) driveReact('Scared', -0.3, 0.5);
-    else if (k === 's' && currentSpeedKmh > 10) driveReact('surprised', -0.1, 0.3);
-    
-    if (k === 'a' || k === 'd') {
-      if (currentSpeedKmh > 70) driveReact('Scared', -0.1, 0.35);
-      else if (currentSpeedKmh > 40) driveReact('worry', -0.05, 0.25);
-      else if (currentSpeedKmh > 10) driveReact('Focused_or_Determined', 0, 0.15);
-    }
-  });
-  window.addEventListener('keyup', e => keysDown.delete(e.key.toLowerCase()));
-
-  setInterval(() => {
-    if (!simPanel.classList.contains('open')) return;
-    if (keysDown.has('w')) {
-      simSpeedKmh = clamp(simSpeedKmh + 4, 0, 120);
-      smoothedForward = lerp(smoothedForward, 5, 0.2); 
-      lastOrientAt = performance.now();
-    }
-    else if (keysDown.has('s')) {
-      simSpeedKmh = clamp(simSpeedKmh - 6, 0, 120);
-      smoothedForward = lerp(smoothedForward, -6, 0.2); 
-      lastOrientAt = performance.now();
-    }
-    else {
-      simSpeedKmh = clamp(simSpeedKmh - 1, 0, 120); 
-    }
-
-    currentSpeedKmh = simSpeedKmh;
-    drivingArousalBoost = clamp(currentSpeedKmh / 80, 0, 1);
-    simSpeed.value = currentSpeedKmh;
-    simSpeedVal.textContent = Math.round(currentSpeedKmh) + ' km/h';
-
-    if (keysDown.has('a')) {
-      lastOrientAt = performance.now();
-      driveTiltX = lerp(driveTiltX, -9, 0.3); driveRoll = lerp(driveRoll, -4, 0.3);
-    } else if (keysDown.has('d')) {
-      lastOrientAt = performance.now();
-      driveTiltX = lerp(driveTiltX, 9, 0.3); driveRoll = lerp(driveRoll, 4, 0.3);
-    }
-  }, 80);
-
-  function blinkLoop() {
-    if (running && currentExpr === baseExpr && !debugMode) {
-      const tiredness = (drivingArousalBoost > 0.2) ? 0 : clamp(idleSeconds() / 90, 0, 0.4);
-      const closeDur = lerp(70, 160, tiredness);
-      const holdDur = lerp(60, 260, tiredness);
-      morphTo('Blink', closeDur, () => {
-        setTimeout(() => { if (running && !debugMode) morphTo(baseExpr, closeDur + 20); }, holdDur);
-      });
-    }
-    const base = 2200 + Math.random() * 3000;
-    setTimeout(blinkLoop, base);
-  }
-  setTimeout(blinkLoop, 2000);
-
-  function getRandomExpression() {
-    let allowed = [...CANDIDATES];
-    if (currentSpeedKmh > 5) {
-        allowed = allowed.filter(k => !['sleepy', 'Sad__look_down_', 'Frustrated_or_Bored', 'sad__look_at_user_', 'Processing'].includes(k));
-    }
-    if (currentSpeedKmh > 50) {
-        allowed = ['Focused_or_Determined', 'Glee', 'Happy', 'Awe', 'surprised', 'Scared', 'worry', 'Furious', 'angery', 'Love', 'Mischievous'];
-    } 
-    else if (currentSpeedKmh >= 20 && currentSpeedKmh <= 40 && Math.abs(smoothedForward) < 2.5) {
-        allowed = ['Neutral', 'Happy', 'Relieved', 'Squint', 'Mischievous'];
-    }
-
-    const randomIdx = Math.floor(Math.random() * allowed.length);
-    return allowed[randomIdx];
-  }
-
-  function randomCognitiveLoop() {
-    if (running && !debugMode) {
-      const newExpr = getRandomExpression();
-      if (newExpr !== baseExpr && currentExpr === baseExpr) {
-        baseExpr = newExpr;
-        const morphDur = 150 + Math.random() * 450; 
-        morphTo(baseExpr, morphDur);
+      // Altitude
+      if (Number.isFinite(coords.altitude)) {
+        valAltitude.textContent = Math.round(metersToUserAlt(coords.altitude));
+      } else {
+        valAltitude.textContent = "--";
       }
+
+      // Acceleration timer
+      handleAccelTimer(speedMs);
+
+      // Free reverse geocoding
+      fetchRoadLocation(coords.latitude, coords.longitude);
+
+      // Indicator light status
+      if (accuracy <= 20) {
+        setGPSStatus("green", "GPS Locked (±" + Math.round(accuracy) + "m)");
+      } else if (accuracy <= 50) {
+        setGPSStatus("yellow", "Moderate Signal (±" + Math.round(accuracy) + "m)");
+      } else {
+        setGPSStatus("orange", "Weak Signal (±" + Math.round(accuracy) + "m)");
+      }
+
+      updateDashboardStats();
+      saveTripData();
+    },
+    error => {
+      if (simActive) return;
+      if (error.code === 1) {
+        setGPSStatus("red", "Location permission denied");
+      } else if (error.code === 2) {
+        setGPSStatus("red", "GPS position unavailable");
+      } else if (error.code === 3) {
+        setGPSStatus("orange", "GPS search timed out");
+      } else {
+        setGPSStatus("red", "GPS error");
+      }
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 1000,
+      timeout: 10000
     }
-    
-    let randomHoldTime;
-    if (currentSpeedKmh > 50) {
-        randomHoldTime = 8000 + (Math.random() * 17000); 
-    } else if (currentSpeedKmh >= 20 && currentSpeedKmh <= 40 && Math.abs(smoothedForward) < 2.5) {
-        randomHoldTime = 20000 + (Math.random() * 40000);
-    } else if (currentSpeedKmh > 5) {
-        randomHoldTime = 15000 + (Math.random() * 25000);
+  );
+}
+
+// --- Hidden Desktop Drive Simulation (WASD / Arrows) ---
+let simActive = false;
+let simSpeedMs = 0;
+let simHeading = 0;
+let simLat = 37.7749;
+let simLon = -122.4194;
+let simAlt = 38;
+const simKeys = { w: false, s: false, a: false, d: false };
+
+const simRoadNames = [
+  "Sunset Blvd", "Grand Avenue", "Pacific Coast Hwy", "Skyline Parkway",
+  "Ocean Drive", "Highland Way", "Metropolitan Expressway"
+];
+let simRoadIndex = 0;
+
+window.addEventListener("keydown", e => {
+  const k = e.key.toLowerCase();
+  let keyMapped = null;
+  if (k === "w" || k === "arrowup") keyMapped = "w";
+  if (k === "s" || k === "arrowdown") keyMapped = "s";
+  if (k === "a" || k === "arrowleft") keyMapped = "a";
+  if (k === "d" || k === "arrowright") keyMapped = "d";
+
+  if (keyMapped) {
+    simKeys[keyMapped] = true;
+    if (!simActive) {
+      simActive = true;
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
+      setGPSStatus("green", "Simulation Mode (WASD Active)");
+      roadLocationEl.textContent = simRoadNames[simRoadIndex];
+    }
+  }
+});
+
+window.addEventListener("keyup", e => {
+  const k = e.key.toLowerCase();
+  if (k === "w" || k === "arrowup") simKeys.w = false;
+  if (k === "s" || k === "arrowdown") simKeys.s = false;
+  if (k === "a" || k === "arrowleft") simKeys.a = false;
+  if (k === "d" || k === "arrowright") simKeys.d = false;
+});
+
+let lastSimFrame = performance.now();
+function runSimulationLoop(now){
+  const dt = Math.min((now - lastSimFrame) / 1000, 0.1);
+  lastSimFrame = now;
+
+  if (simActive) {
+    let accelG = 0;
+    let turnG = 0;
+
+    // Throttle & Brake physics (supports speeds up to 1000 km/h)
+    const MAX_SPEED_CAP_MS = 1000 / 3.6; // 277.78 m/s = 1000 km/h
+    const prevSpeed = simSpeedMs;
+
+    if (simKeys.w) {
+      const throttlePower = Math.max(5.0, 11.5 + (simSpeedMs * 0.05));
+      simSpeedMs += throttlePower * dt;
+    } else if (simKeys.s) {
+      simSpeedMs -= (14.0 + simSpeedMs * 0.08) * dt; // Powerful high-speed braking
     } else {
-        randomHoldTime = 40000 + (Math.random() * 140000);
+      // Natural rolling resistance and aerodynamic drag
+      simSpeedMs -= (0.4 + 0.012 * simSpeedMs) * dt;
     }
 
-    setTimeout(randomCognitiveLoop, randomHoldTime);
+    if (simSpeedMs < 0) simSpeedMs = 0;
+    if (simSpeedMs > MAX_SPEED_CAP_MS) simSpeedMs = MAX_SPEED_CAP_MS; // 1000 km/h cap
+
+    // True longitudinal G from real acceleration / braking
+    accelG = (simSpeedMs - prevSpeed) / (dt * 9.80665);
+
+    // Steering physics & Centripetal Lateral G = (v * omega) / 9.80665
+    let turnRateDeg = 0;
+    if (simKeys.a) {
+      turnRateDeg = -55;
+      simHeading = (simHeading - 55 * dt + 360) % 360;
+    }
+    if (simKeys.d) {
+      turnRateDeg = 55;
+      simHeading = (simHeading + 55 * dt) % 360;
+    }
+
+    if (turnRateDeg !== 0 && simSpeedMs > 1.0) {
+      const turnRateRad = Math.abs(turnRateDeg) * (Math.PI / 180);
+      turnG = (simSpeedMs * turnRateRad) / 9.80665;
+    }
+
+    // Distance & coordinates
+    const distMoved = simSpeedMs * dt;
+    if (distMoved > 0) {
+      if (tripActive) tripData.distanceMeters += distMoved;
+      const rad = (simHeading * Math.PI) / 180;
+      simLat += (Math.cos(rad) * distMoved) / 111111;
+      simLon += (Math.sin(rad) * distMoved) / (111111 * Math.cos((simLat * Math.PI) / 180));
+      simAlt = Math.round(38 + Math.sin(tripData.distanceMeters / 600) * 18);
+
+      if (Math.floor(tripData.distanceMeters / 500) > simRoadIndex) {
+        simRoadIndex = Math.floor(tripData.distanceMeters / 500) % simRoadNames.length;
+        roadLocationEl.textContent = simRoadNames[simRoadIndex];
+      }
+    }
+
+    // Update Speed
+    currentSpeedKmh = simSpeedMs * 3.6;
+    speedEl.textContent = Math.round(msToUserSpeed(simSpeedMs));
+
+    if (tripActive && simSpeedMs > 0.8) {
+      tripData.speedSum += simSpeedMs;
+      tripData.speedCount++;
+      if (simSpeedMs > tripData.maxSpeedMs) {
+        tripData.maxSpeedMs = simSpeedMs;
+      }
+    }
+
+    // Update Heading & Compass
+    const roundedHeading = Math.round(simHeading);
+    compassDegEl.textContent = roundedHeading + "°";
+    compassCardinalEl.textContent = getCardinal(roundedHeading);
+
+    // Update Altitude
+    valAltitude.textContent = Math.round(metersToUserAlt(simAlt));
+
+    // Update Simulated G-Force
+    const totalG = Math.sqrt(accelG * accelG + turnG * turnG);
+    const displayG = totalG > 0.05 ? totalG : 0;
+    valGforce.textContent = displayG.toFixed(2);
+    if (tripActive && displayG > tripData.maxGForce) {
+      tripData.maxGForce = displayG;
+    }
+
+    // Update Acceleration Timer
+    handleAccelTimer(simSpeedMs);
+
+    updateDashboardStats();
+    if (tripActive) saveTripData();
   }
-  setTimeout(randomCognitiveLoop, 3000);
 
-  document.querySelector('.stage').addEventListener('click', () => {
-    if (!running || debugMode) return;
-    markActivity();
-    const key = getRandomExpression();
-    morphTo(key, 160, () => {
-      setTimeout(() => { if (running && !debugMode) morphTo(baseExpr, 300); }, 500 + Math.random() * 400);
+  requestAnimationFrame(runSimulationLoop);
+}
+requestAnimationFrame(runSimulationLoop);
+
+// --- Auto-fade for HUD & Setting buttons after 5s of inactivity ---
+const fadeBtns = [mirrorToggleBtn, rotateToggleBtn, settingsOpenBtn, tripStartBtn, tripResetBtn];
+let fadeTimeout = null;
+
+function showControls(){
+  fadeBtns.forEach(btn => btn.classList.remove("faded"));
+  resetFadeTimer();
+}
+
+function hideControls(){
+  if (settingsModal.classList.contains("open")) return;
+  fadeBtns.forEach(btn => btn.classList.add("faded"));
+}
+
+function resetFadeTimer(){
+  if (fadeTimeout) clearTimeout(fadeTimeout);
+  if (!settingsModal.classList.contains("open")) {
+    fadeTimeout = setTimeout(hideControls, 5000);
+  }
+}
+
+["touchstart", "mousemove", "mousedown", "keydown", "click"].forEach(evt => {
+  window.addEventListener(evt, showControls, { passive: true });
+});
+
+// --- Modal & User Controls ---
+function openModal(){
+  settingsModal.classList.add("open");
+  showControls();
+  renderDriveRecords();
+}
+function closeModal(){
+  settingsModal.classList.remove("open");
+  resetFadeTimer();
+}
+
+settingsOpenBtn.addEventListener("click", openModal);
+settingsCloseBtn.addEventListener("click", closeModal);
+modalDoneBtn.addEventListener("click", closeModal);
+settingsModal.addEventListener("click", e => {
+  if (e.target === settingsModal) closeModal();
+});
+
+resetFadeTimer();
+
+mirrorToggleBtn.addEventListener("click", () => {
+  settings.mirror = !settings.mirror;
+  saveSettings();
+  applyLayoutSettings();
+});
+
+btnUnitKmh.addEventListener("click", () => {
+  settings.unit = "kmh";
+  saveSettings();
+  applyLayoutSettings();
+});
+
+btnUnitMph.addEventListener("click", () => {
+  settings.unit = "mph";
+  saveSettings();
+  applyLayoutSettings();
+});
+
+// --- Drive Records Management ---
+function formatDateTime(d){
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, "0");
+  const da = String(d.getDate()).padStart(2, "0");
+  const h = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${y}-${mo}-${da} ${h}:${mi}`;
+}
+
+function getSavedDrives(){
+  try {
+    const raw = localStorage.getItem(DRIVES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch(e){
+    return [];
+  }
+}
+
+function saveDrivesList(records){
+  try {
+    localStorage.setItem(DRIVES_KEY, JSON.stringify(records));
+  } catch(e){}
+}
+
+function generateSmsText(record){
+  const distUnit = record.unit === "kmh" ? "km" : "mi";
+  const speedUnit = record.unit === "kmh" ? "km/h" : "mph";
+  let text = `Drive Record: ${record.name}\n` +
+             `Distance: ${record.distance} ${distUnit}\n` +
+             `Duration: ${record.duration}\n` +
+             `Max Speed: ${record.maxSpeed} ${speedUnit}\n` +
+             `Avg Speed: ${record.avgSpeed} ${speedUnit}`;
+  if (record.maxG && parseFloat(record.maxG) > 0) {
+    text += `\nMax G-Force: ${record.maxG}G`;
+  }
+  if (record.accelTime && record.accelTime !== "Ready") {
+    text += `\n${record.unit === "kmh" ? "0-100 km/h" : "0-60 mph"}: ${record.accelTime}`;
+  }
+  if (record.location && record.location !== "--") {
+    text += `\nLocation: ${record.location}`;
+  }
+  return text;
+}
+
+function copyDriveToClipboard(text, btnElement){
+  function onSuccess(){
+    const orig = btnElement.textContent;
+    btnElement.textContent = "Copied!";
+    setTimeout(() => { btnElement.textContent = orig; }, 2000);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(onSuccess).catch(() => fallbackCopy(text, onSuccess));
+  } else {
+    fallbackCopy(text, onSuccess);
+  }
+}
+
+function fallbackCopy(text, cb){
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand("copy");
+    if (cb) cb();
+  } catch(e){}
+  document.body.removeChild(ta);
+}
+
+function renderDriveRecords(){
+  const records = getSavedDrives();
+  driveRecordsList.innerHTML = "";
+  if (records.length === 0) {
+    driveRecordsList.innerHTML = `<div class="record-empty">No saved drive records yet.</div>`;
+    return;
+  }
+
+  records.forEach((rec, idx) => {
+    const card = document.createElement("div");
+    card.className = "record-card";
+
+    const distUnit = rec.unit === "kmh" ? "km" : "mi";
+    const speedUnit = rec.unit === "kmh" ? "km/h" : "mph";
+
+    card.innerHTML = `
+      <div class="record-header">
+        <span class="record-name">${rec.name}</span>
+      </div>
+      <div class="record-stats">
+        ${rec.distance} ${distUnit} · ${rec.duration} · Max ${rec.maxSpeed} ${speedUnit} · Avg ${rec.avgSpeed} ${speedUnit}
+        ${rec.maxG && parseFloat(rec.maxG) > 0 ? ` · ${rec.maxG}G` : ""}
+        ${rec.accelTime && rec.accelTime !== "Ready" ? ` · ${rec.accelTime}` : ""}
+      </div>
+      ${rec.location && rec.location !== "--" ? `<div class="record-location">${rec.location}</div>` : ""}
+      <div class="record-btn-group">
+        <button class="btn btn-primary btn-copy-sms">Copy for SMS</button>
+        <button class="btn btn-secondary btn-del-rec">Delete</button>
+      </div>
+    `;
+
+    const copyBtn = card.querySelector(".btn-copy-sms");
+    copyBtn.addEventListener("click", () => {
+      copyDriveToClipboard(generateSmsText(rec), copyBtn);
     });
-  });
 
-  liveDot.addEventListener('click', () => {
-    running = !running;
-    liveDot.classList.toggle('live', running);
-    if (running) { markActivity(); morphTo(baseExpr, 200); }
+    const delBtn = card.querySelector(".btn-del-rec");
+    delBtn.addEventListener("click", () => {
+      records.splice(idx, 1);
+      saveDrivesList(records);
+      renderDriveRecords();
+    });
+
+    driveRecordsList.appendChild(card);
   });
-  liveDot.classList.add('live');
+}
+
+btnSaveDrive.addEventListener("click", () => {
+  const records = getSavedDrives();
+  const recordName = formatDateTime(new Date());
+  const dist = metersToUserDist(tripData.distanceMeters);
+  const avgMs = tripData.movingTimeSec > 2
+    ? (tripData.distanceMeters / tripData.movingTimeSec)
+    : (tripData.speedCount > 0 ? (tripData.speedSum / tripData.speedCount) : 0);
+
+  const newRecord = {
+    name: recordName,
+    distance: dist < 10 ? dist.toFixed(2) : dist.toFixed(1),
+    duration: formatDuration(tripData.movingTimeSec),
+    maxSpeed: Math.round(msToUserSpeed(tripData.maxSpeedMs)),
+    avgSpeed: Math.round(msToUserSpeed(avgMs)),
+    maxG: (tripData.maxGForce || gForceCurrent || 0).toFixed(2),
+    accelTime: lastAccelResult,
+    location: roadLocationEl.textContent,
+    unit: settings.unit,
+    timestamp: Date.now()
+  };
+
+  records.unshift(newRecord);
+  saveDrivesList(records);
+  renderDriveRecords();
+
+  const orig = btnSaveDrive.textContent;
+  btnSaveDrive.textContent = "Saved!";
+  setTimeout(() => { btnSaveDrive.textContent = orig; }, 2000);
+});
+
+btnExportDrives.addEventListener("click", () => {
+  const records = getSavedDrives();
+  if (records.length === 0) {
+    alert("No drive records to export.");
+    return;
+  }
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(records, null, 2));
+  const dlAnchor = document.createElement("a");
+  dlAnchor.setAttribute("href", dataStr);
+  const dateTag = new Date().toISOString().slice(0, 10);
+  dlAnchor.setAttribute("download", `hud_drives_${dateTag}.json`);
+  document.body.appendChild(dlAnchor);
+  dlAnchor.click();
+  document.body.removeChild(dlAnchor);
+});
+
+btnClearDrives.addEventListener("click", () => {
+  if (confirm("Clear all saved drive history?")) {
+    saveDrivesList([]);
+    renderDriveRecords();
+  }
+});
+
+let tripActive = false;
+
+function setTripActive(active){
+  tripActive = active;
+  if (tripActive) {
+    tripStartBtn.classList.add("trip-active");
+    tripStartBtn.setAttribute("title", "Pause Trip");
+    tripStartBtn.setAttribute("aria-label", "Pause Trip");
+    tripStartBtn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+  } else {
+    tripStartBtn.classList.remove("trip-active");
+    tripStartBtn.setAttribute("title", "Start Trip");
+    tripStartBtn.setAttribute("aria-label", "Start Trip");
+    tripStartBtn.innerHTML = '<svg viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"/></svg>';
+  }
+}
+
+function openConfirmResetModal(){
+  confirmModal.classList.add("open");
+  showControls();
+}
+
+function closeConfirmResetModal(){
+  confirmModal.classList.remove("open");
+  resetFadeTimer();
+}
+
+function executeTripReset(){
+  tripData.maxSpeedMs = 0;
+  tripData.distanceMeters = 0;
+  tripData.movingTimeSec = 0;
+  tripData.speedSum = 0;
+  tripData.speedCount = 0;
+  tripData.maxGForce = 0;
+  saveTripData();
+  updateDashboardStats();
+  accelState = "ready";
+  accelArmed = true;
+  lastAccelResult = null;
+  valAccel.textContent = "Ready";
+  setTripActive(false); // start button paused when restart
+}
+
+btnResetTrip.addEventListener("click", openConfirmResetModal);
+tripResetBtn.addEventListener("click", openConfirmResetModal);
+
+confirmModalCancel.addEventListener("click", closeConfirmResetModal);
+confirmModalOk.addEventListener("click", () => {
+  closeConfirmResetModal();
+  executeTripReset();
+});
+confirmModal.addEventListener("click", (e) => {
+  if (e.target === confirmModal) closeConfirmResetModal();
+});
+
+tripStartBtn.addEventListener("click", () => {
+  setTripActive(!tripActive);
+});
+
+rotateToggleBtn.addEventListener("click", () => {
+  settings.rotate = !settings.rotate;
+  saveSettings();
+  applyLayoutSettings();
+});
+
+// Checklist event bindings
+const checkBindings = [
+  [checkClock, "showClock"],
+  [checkCompass, "showCompass"],
+  [checkLocation, "showLocation"],
+  [checkMaxSpeed, "showMaxSpeed"],
+  [checkAvgSpeed, "showAvgSpeed"],
+  [checkTripDist, "showTripDist"],
+  [checkTripTime, "showTripTime"],
+  [checkAltitude, "showAltitude"],
+  [checkAccel, "showAccel"],
+  [checkGforce, "showGforce"],
+  [checkMirror, "mirror"],
+  [checkRotate, "rotate"],
+  [checkWakelock, "wakelock"]
+];
+
+checkBindings.forEach(([checkbox, prop]) => {
+  checkbox.addEventListener("change", () => {
+    settings[prop] = checkbox.checked;
+    saveSettings();
+    applyLayoutSettings();
+    if (prop === "wakelock") {
+      if (settings.wakelock) requestWakeLock();
+      else releaseWakeLock();
+    }
+    if (prop === "showGforce" && settings.showGforce) {
+      initGForceSensor();
+    }
+  });
+});
+
+indicatorEl.addEventListener("click", () => {
+  if (simActive) {
+    simActive = false;
+    setGPSStatus("orange", "Exited Simulation. Starting GPS…");
+    startGPS();
+  } else {
+    startGPS();
+  }
+});
+
+// Fullscreen & WakeLock interaction on initial user gesture
+window.addEventListener("click", () => {
+  if (settings.wakelock && !wakeLockSentinel) {
+    requestWakeLock();
+  }
+}, { once: false });
+
+// Initialize
+applyLayoutSettings();
+requestWakeLock();
+startGPS();
 </script>
 </body>
 </html>
